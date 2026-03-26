@@ -105,7 +105,7 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-160px)] min-h-[500px]">
+    <div className="flex flex-col h-[calc(100dvh-180px)] sm:h-[calc(100vh-160px)] min-h-[400px]">
       {/* Histórico */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4 rounded-2xl bg-blue-950/40 border border-blue-800/40 mb-4">
         {mensagens.map((m, i) => (

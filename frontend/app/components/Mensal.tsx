@@ -77,21 +77,21 @@ export default function Mensal({ refreshKey = 0 }: Props) {
   return (
     <div className="space-y-6">
       {/* Cards de estatísticas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Meses registrados</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Meses</p>
           <p className="text-2xl font-bold text-white">{dados.length}</p>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média entradas/mês</p>
-          <p className="text-xl font-bold text-emerald-400">{formatBRL(mediaEntradas)}</p>
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média entradas</p>
+          <p className="text-base sm:text-xl font-bold text-emerald-400">{formatBRL(mediaEntradas)}</p>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média saídas/mês</p>
-          <p className="text-xl font-bold text-red-400">{formatBRL(mediaSaidas)}</p>
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média saídas</p>
+          <p className="text-base sm:text-xl font-bold text-red-400">{formatBRL(mediaSaidas)}</p>
         </div>
-        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Melhor mês</p>
+        <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Melhor mês</p>
           <p className="text-sm font-bold text-blue-300">{labelMes(melhorMes.mes)}</p>
           <p className="text-xs text-emerald-400 mt-0.5">{formatBRL(melhorMes.entradas - melhorMes.saidas)}</p>
         </div>

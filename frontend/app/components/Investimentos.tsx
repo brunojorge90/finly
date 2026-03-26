@@ -104,26 +104,26 @@ export default function Investimentos({ refreshKey = 0 }: Props) {
   return (
     <div className="space-y-6">
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-5 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-2">
-            Patrimônio líquido
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-xl sm:rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3 sm:p-5 text-center">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 sm:mb-2">
+            Patrimônio
           </p>
-          <p className={`text-2xl font-bold ${patrimonioLiquido >= 0 ? "text-blue-300" : "text-red-400"}`}>
+          <p className={`text-base sm:text-2xl font-bold ${patrimonioLiquido >= 0 ? "text-blue-300" : "text-red-400"}`}>
             {formatBRL(patrimonioLiquido)}
           </p>
         </div>
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-2">
-            Total aportado
+        <div className="rounded-xl sm:rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 sm:p-5 text-center">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 sm:mb-2">
+            Aportado
           </p>
-          <p className="text-2xl font-bold text-emerald-400">{formatBRL(totalAportado)}</p>
+          <p className="text-base sm:text-2xl font-bold text-emerald-400">{formatBRL(totalAportado)}</p>
         </div>
-        <div className="rounded-2xl border border-white/8 bg-white/3 p-5 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-2">
-            Total resgatado
+        <div className="rounded-xl sm:rounded-2xl border border-white/8 bg-white/3 p-3 sm:p-5 text-center">
+          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 sm:mb-2">
+            Resgatado
           </p>
-          <p className="text-2xl font-bold text-white/60">{formatBRL(totalResgatado)}</p>
+          <p className="text-base sm:text-2xl font-bold text-white/60">{formatBRL(totalResgatado)}</p>
         </div>
       </div>
 
@@ -133,7 +133,8 @@ export default function Investimentos({ refreshKey = 0 }: Props) {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-4">
             Evolução do patrimônio
           </p>
-          <div className="flex items-end gap-2 h-28">
+          <div className="overflow-x-auto -mx-1 px-1">
+          <div className="flex items-end gap-2 h-28" style={{ minWidth: `${meses.length * 52}px` }}>
             {meses.map((m, i) => {
               const height = Math.max((acumulado[i] / maxAcc) * 100, 4);
               return (
@@ -148,6 +149,7 @@ export default function Investimentos({ refreshKey = 0 }: Props) {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       )}

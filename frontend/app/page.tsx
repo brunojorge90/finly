@@ -13,12 +13,20 @@ import { clearAuth, getUser, isLoggedIn } from "./lib/auth";
 type Aba = "dashboard" | "mensal" | "extrato" | "investimentos" | "chat";
 
 const ABAS: { id: Aba; label: string; icon: string }[] = [
-  { id: "dashboard",    label: "Dashboard",    icon: "📊" },
-  { id: "mensal",       label: "Mensal",       icon: "📅" },
-  { id: "extrato",      label: "Extrato",      icon: "📋" },
-  { id: "investimentos",label: "Investimentos",icon: "📈" },
-  { id: "chat",         label: "Chat IA",      icon: "🤖" },
+  { id: "dashboard",     label: "Dashboard",    icon: "📊" },
+  { id: "mensal",        label: "Mensal",        icon: "📅" },
+  { id: "extrato",       label: "Extrato",       icon: "📋" },
+  { id: "investimentos", label: "Investimentos", icon: "📈" },
+  { id: "chat",          label: "Chat IA",       icon: "🤖" },
 ];
+
+const TITULOS: Record<Aba, string> = {
+  dashboard:     "Dashboard",
+  mensal:        "Visão mensal",
+  extrato:       "Extrato de transações",
+  investimentos: "Investimentos",
+  chat:          "Chat com IA",
+};
 
 export default function Page() {
   const router = useRouter();
@@ -52,45 +60,50 @@ export default function Page() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="relative border-b border-white/5 bg-black/30 backdrop-blur-xl sticky top-0 z-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      {/* ── HEADER ── */}
+      <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-base shadow-lg shadow-blue-500/25">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600
+                            flex items-center justify-center text-sm shadow-lg shadow-blue-500/25">
               💰
             </div>
-            <span className="font-semibold text-white tracking-tight">Finly</span>
+            <span className="font-semibold text-white tracking-tight text-sm sm:text-base">Finly</span>
           </div>
 
-          {/* Nav pills */}
-          <nav className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+          {/* Nav pills — desktop only */}
+          <nav className="hidden sm:flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
             {ABAS.map((a) => (
               <button
                 key={a.id}
                 onClick={() => setAba(a.id)}
-                className={`relative flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
                   ${aba === a.id
                     ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30"
-                    : "text-white/50 hover:text-white/80"
-                  }`}
+                    : "text-white/50 hover:text-white/80"}`}
               >
-                <span className="text-base leading-none">{a.icon}</span>
-                <span className="hidden sm:inline">{a.label}</span>
+                <span className="text-sm leading-none">{a.icon}</span>
+                <span className="hidden lg:inline">{a.label}</span>
               </button>
             ))}
           </nav>
 
+          {/* Mobile: título da aba atual */}
+          <span className="sm:hidden text-sm font-medium text-white/70 truncate">
+            {TITULOS[aba]}
+          </span>
+
           {/* User + logout */}
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="hidden md:block text-xs text-white/40 max-w-[100px] truncate">
               {nomeUsuario}
             </span>
             <button
               onClick={handleLogout}
               className="rounded-lg border border-white/10 bg-white/5 hover:bg-white/10
-                         px-3 py-1.5 text-xs font-medium text-white/60 hover:text-white
-                         transition-colors"
+                         px-3 py-1.5 text-xs font-medium text-white/60 hover:text-white transition-colors"
             >
               Sair
             </button>
@@ -98,21 +111,22 @@ export default function Page() {
         </div>
       </header>
 
-      {/* Main */}
-      <main className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* ── MAIN ── */}
+      {/* pb-24 no mobile para não ficar atrás da bottom nav */}
+      <main className="relative mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
 
         {/* Dashboard */}
         {aba === "dashboard" && (
           <>
-            <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-4">
+            <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-3 sm:mb-4">
                 Registrar transação
               </p>
               <TransacaoInput onTransacaoCriada={() => setRefreshKey((k) => k + 1)} />
             </div>
 
-            <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+            <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
                 Resumo financeiro
               </p>
               <Resumo refreshKey={refreshKey} />
@@ -122,8 +136,8 @@ export default function Page() {
 
         {/* Mensal */}
         {aba === "mensal" && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
               Visão mensal
             </p>
             <Mensal refreshKey={refreshKey} />
@@ -132,8 +146,8 @@ export default function Page() {
 
         {/* Extrato */}
         {aba === "extrato" && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
               Extrato de transações
             </p>
             <Extrato refreshKey={refreshKey} />
@@ -142,8 +156,8 @@ export default function Page() {
 
         {/* Investimentos */}
         {aba === "investimentos" && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
               Investimentos
             </p>
             <Investimentos refreshKey={refreshKey} />
@@ -152,14 +166,35 @@ export default function Page() {
 
         {/* Chat */}
         {aba === "chat" && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
               Chat com IA
             </p>
             <Chat />
           </div>
         )}
       </main>
+
+      {/* ── BOTTOM NAV — mobile only ── */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20
+                      border-t border-white/8 bg-[#060d1f]/95 backdrop-blur-xl">
+        <div className="flex items-stretch justify-around px-1 pb-safe">
+          {ABAS.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => setAba(a.id)}
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2.5 px-1
+                          text-[10px] font-medium transition-colors
+                ${aba === a.id ? "text-blue-400" : "text-white/35"}`}
+            >
+              <span className={`text-xl transition-transform duration-200 ${aba === a.id ? "scale-110" : ""}`}>
+                {a.icon}
+              </span>
+              <span className="leading-tight">{a.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
