@@ -1,21 +1,26 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()  # carrega .env antes de qualquer import que use variáveis de ambiente
+load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from auth import create_token, decode_token, hash_password, verify_password
 from categorizer import categorizar
 from database import (
     buscar_transacoes,
+    buscar_usuario_por_email,
+    buscar_usuario_por_id,
+    criar_usuario,
     init_db,
     resumo_por_categoria,
     saldo_atual,
     salvar_transacao,
 )
 
-app = FastAPI(title="Agente Financeiro API")
+app = FastAPI(title="Finly API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,10 +31,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security = HTTPBearer()
+
 
 @app.on_event("startup")
 def startup():
     init_db()
+
+
+# ---------- auth ----------
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> int:
+    try:
+        return decode_token(credentials.credentials)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado")
 
 
 # ---------- schemas ----------
@@ -38,21 +54,53 @@ class TextoLivre(BaseModel):
     texto: str
 
 
-# ---------- rotas ----------
+class RegisterBody(BaseModel):
+    nome: str
+    email: str
+    senha: str
+
+
+class LoginBody(BaseModel):
+    email: str
+    senha: str
+
+
+# ---------- rotas públicas ----------
 
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
 
+@app.post("/register", status_code=201)
+def register(body: RegisterBody):
+    if buscar_usuario_por_email(body.email):
+        raise HTTPException(status_code=409, detail="E-mail já cadastrado")
+    user_id = criar_usuario(body.nome, body.email, hash_password(body.senha))
+    token = create_token(user_id)
+    return {"token": token, "nome": body.nome, "email": body.email}
+
+
+@app.post("/login")
+def login(body: LoginBody):
+    user = buscar_usuario_por_email(body.email)
+    if not user or not verify_password(body.senha, user["senha"]):
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos")
+    token = create_token(user["id"])
+    return {"token": token, "nome": user["nome"], "email": user["email"]}
+
+
+# ---------- rotas protegidas ----------
+
 @app.post("/transacao", status_code=201)
-def criar_transacao(body: TextoLivre):
+def criar_transacao(body: TextoLivre, user_id: int = Depends(get_current_user)):
     try:
         transacao = categorizar(body.texto)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
     id_criado = salvar_transacao(
+        user_id=user_id,
         tipo=transacao.tipo,
         valor=transacao.valor,
         descricao=transacao.descricao,
@@ -71,15 +119,15 @@ def criar_transacao(body: TextoLivre):
 
 
 @app.get("/transacoes")
-def listar_transacoes():
-    return buscar_transacoes(limite=50)
+def listar_transacoes(user_id: int = Depends(get_current_user)):
+    return buscar_transacoes(user_id=user_id, limite=50)
 
 
 @app.get("/resumo")
-def obter_resumo():
-    return resumo_por_categoria()
+def obter_resumo(user_id: int = Depends(get_current_user)):
+    return resumo_por_categoria(user_id=user_id)
 
 
 @app.get("/saldo")
-def obter_saldo():
-    return {"saldo": saldo_atual()}
+def obter_saldo(user_id: int = Depends(get_current_user)):
+    return {"saldo": saldo_atual(user_id=user_id)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fetchApi } from "../lib/auth";
 
 interface Mensagem {
   role: "user" | "assistant";
@@ -32,9 +33,9 @@ export default function Chat() {
 
   async function fetchContexto() {
     const [saldoRes, resumoRes, transacoesRes] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/saldo`),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumo`),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/transacoes`),
+      fetchApi("/saldo"),
+      fetchApi("/resumo"),
+      fetchApi("/transacoes"),
     ]);
     const saldo = await saldoRes.json();
     const resumo = await resumoRes.json();

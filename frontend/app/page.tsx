@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Chat from "./components/Chat";
 import Extrato from "./components/Extrato";
 import Resumo from "./components/Resumo";
 import TransacaoInput from "./components/TransacaoInput";
+import { clearAuth, getUser, isLoggedIn } from "./lib/auth";
 
 type Aba = "dashboard" | "extrato" | "chat";
 
@@ -15,8 +17,28 @@ const ABAS: { id: Aba; label: string; icon: string }[] = [
 ];
 
 export default function Page() {
+  const router = useRouter();
   const [aba, setAba] = useState<Aba>("dashboard");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [authed, setAuthed] = useState(false);
+  const [nomeUsuario, setNomeUsuario] = useState("");
+
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace("/login");
+    } else {
+      setAuthed(true);
+      const user = getUser();
+      if (user) setNomeUsuario(user.nome);
+    }
+  }, [router]);
+
+  function handleLogout() {
+    clearAuth();
+    router.replace("/login");
+  }
+
+  if (!authed) return null;
 
   return (
     <div className="min-h-screen bg-[#060d1f] text-white">
@@ -54,6 +76,21 @@ export default function Page() {
               </button>
             ))}
           </nav>
+
+          {/* User + logout */}
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">
+              {nomeUsuario}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg border border-white/10 bg-white/5 hover:bg-white/10
+                         px-3 py-1.5 text-xs font-medium text-white/60 hover:text-white
+                         transition-colors"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
@@ -63,7 +100,6 @@ export default function Page() {
         {/* Dashboard */}
         {aba === "dashboard" && (
           <>
-            {/* Input card */}
             <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-4">
                 Registrar transação
@@ -71,7 +107,6 @@ export default function Page() {
               <TransacaoInput onTransacaoCriada={() => setRefreshKey((k) => k + 1)} />
             </div>
 
-            {/* Resumo full width */}
             <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
                 Resumo financeiro

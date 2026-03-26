@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fetchApi } from "../lib/auth";
 
 interface ItemResumo {
   categoria: string;
@@ -44,8 +45,8 @@ export default function Resumo({ refreshKey = 0 }: Props) {
     setErro(null);
     try {
       const [resumoRes, saldoRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumo`),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/saldo`),
+        fetchApi("/resumo"),
+        fetchApi("/saldo"),
       ]);
 
       if (!resumoRes.ok || !saldoRes.ok) throw new Error("Erro ao buscar dados");

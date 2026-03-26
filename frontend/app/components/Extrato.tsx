@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+import { fetchApi } from "../lib/auth";
 
 interface Transacao {
   id: number;
@@ -80,7 +81,7 @@ export default function Extrato({ refreshKey = 0 }: Props) {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transacoes`);
+      const res = await fetchApi("/transacoes");
       if (!res.ok) throw new Error(`Erro ${res.status}`);
       setTransacoes(await res.json());
     } catch (err) {

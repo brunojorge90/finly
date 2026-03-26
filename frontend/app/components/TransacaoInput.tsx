@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchApi } from "../lib/auth";
 
 interface Transacao {
   id: number;
@@ -30,14 +31,10 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
     setErro(null);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/transacao`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto }),
-        }
-      );
+      const res = await fetchApi("/transacao", {
+        method: "POST",
+        body: JSON.stringify({ texto }),
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
