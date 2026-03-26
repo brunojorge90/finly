@@ -1,0 +1,10 @@
+node_modules
+.env
+.env.local
+venv
+__pycache__
+*.pyc
+finance.db
+.next/
+.claude/
+uvicorn.log
