@@ -92,6 +92,31 @@ def resumo_por_categoria(user_id: int) -> list[dict]:
         return [dict(row) for row in rows]
 
 
+def resumo_mensal(user_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT
+                substr(data, 1, 7) AS mes,
+                COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE 0 END), 0) AS entradas,
+                COALESCE(SUM(CASE WHEN tipo = 'saida'   THEN valor ELSE 0 END), 0) AS saidas
+            FROM transacoes
+            WHERE user_id = ?
+            GROUP BY mes
+            ORDER BY mes DESC
+        """, (user_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+
+def investimentos(user_id: int) -> list[dict]:
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT * FROM transacoes
+            WHERE user_id = ? AND categoria = 'Investimentos'
+            ORDER BY data DESC, id DESC
+        """, (user_id,)).fetchall()
+        return [dict(row) for row in rows]
+
+
 def saldo_atual(user_id: int) -> float:
     with get_conn() as conn:
         row = conn.execute("""

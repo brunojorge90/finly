@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Chat from "./components/Chat";
 import Extrato from "./components/Extrato";
+import Investimentos from "./components/Investimentos";
+import Mensal from "./components/Mensal";
 import Resumo from "./components/Resumo";
 import TransacaoInput from "./components/TransacaoInput";
 import { clearAuth, getUser, isLoggedIn } from "./lib/auth";
 
-type Aba = "dashboard" | "extrato" | "chat";
+type Aba = "dashboard" | "mensal" | "extrato" | "investimentos" | "chat";
 
 const ABAS: { id: Aba; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Dashboard", icon: "📊" },
-  { id: "extrato",   label: "Extrato",   icon: "📋" },
-  { id: "chat",      label: "Chat IA",   icon: "🤖" },
+  { id: "dashboard",    label: "Dashboard",    icon: "📊" },
+  { id: "mensal",       label: "Mensal",       icon: "📅" },
+  { id: "extrato",      label: "Extrato",      icon: "📋" },
+  { id: "investimentos",label: "Investimentos",icon: "📈" },
+  { id: "chat",         label: "Chat IA",      icon: "🤖" },
 ];
 
 export default function Page() {
@@ -116,6 +120,16 @@ export default function Page() {
           </>
         )}
 
+        {/* Mensal */}
+        {aba === "mensal" && (
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+              Visão mensal
+            </p>
+            <Mensal refreshKey={refreshKey} />
+          </div>
+        )}
+
         {/* Extrato */}
         {aba === "extrato" && (
           <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
@@ -123,6 +137,16 @@ export default function Page() {
               Extrato de transações
             </p>
             <Extrato refreshKey={refreshKey} />
+          </div>
+        )}
+
+        {/* Investimentos */}
+        {aba === "investimentos" && (
+          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-blue-400 mb-5">
+              Investimentos
+            </p>
+            <Investimentos refreshKey={refreshKey} />
           </div>
         )}
 

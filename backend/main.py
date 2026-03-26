@@ -15,6 +15,8 @@ from database import (
     buscar_usuario_por_id,
     criar_usuario,
     init_db,
+    investimentos,
+    resumo_mensal,
     resumo_por_categoria,
     saldo_atual,
     salvar_transacao,
@@ -131,3 +133,13 @@ def obter_resumo(user_id: int = Depends(get_current_user)):
 @app.get("/saldo")
 def obter_saldo(user_id: int = Depends(get_current_user)):
     return {"saldo": saldo_atual(user_id=user_id)}
+
+
+@app.get("/mensal")
+def obter_mensal(user_id: int = Depends(get_current_user)):
+    return resumo_mensal(user_id=user_id)
+
+
+@app.get("/investimentos")
+def obter_investimentos(user_id: int = Depends(get_current_user)):
+    return investimentos(user_id=user_id)
