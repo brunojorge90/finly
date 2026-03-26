@@ -1,7 +1,7 @@
+import os
 import sqlite3
 from datetime import datetime
-
-DB_PATH = "finance.db"
+DB_PATH = os.environ.get("DB_PATH", "/tmp/finance.db")
 
 
 def get_conn():
