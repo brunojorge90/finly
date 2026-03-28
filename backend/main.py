@@ -12,6 +12,7 @@ from categorizer import categorizar
 from database import (
     atualizar_pagamento,
     buscar_transacoes,
+    deletar_transacao,
     buscar_usuario_por_email,
     buscar_usuario_por_id,
     criar_usuario,
@@ -149,6 +150,13 @@ def obter_mensal(user_id: int = Depends(get_current_user)):
 @app.get("/investimentos")
 def obter_investimentos(user_id: int = Depends(get_current_user)):
     return investimentos(user_id=user_id)
+
+
+@app.delete("/transacao/{transacao_id}", status_code=200)
+def remover_transacao(transacao_id: int, user_id: int = Depends(get_current_user)):
+    if not deletar_transacao(transacao_id, user_id):
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+    return {"ok": True}
 
 
 @app.patch("/transacao/{transacao_id}/pagamento")

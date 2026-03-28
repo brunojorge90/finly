@@ -156,6 +156,15 @@ def salvar_transacao(
             return cur.lastrowid
 
 
+def deletar_transacao(transacao_id: int, user_id: int) -> bool:
+    with _cur() as cur:
+        cur.execute(
+            f"DELETE FROM transacoes WHERE id = {P} AND user_id = {P}",
+            (transacao_id, user_id),
+        )
+        return cur.rowcount > 0
+
+
 def atualizar_pagamento(transacao_id: int, user_id: int, pagamento: str) -> bool:
     with _cur() as cur:
         cur.execute(

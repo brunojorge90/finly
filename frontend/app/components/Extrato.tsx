@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import * as XLSX from "xlsx";
 import { fetchApi } from "../lib/auth";
@@ -80,6 +80,15 @@ export default function Extrato({ refreshKey = 0 }: Props) {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [mesSelecionado, setMesSelecionado] = useState<string>("todos");
+  const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+  const [deletandoId, setDeletandoId] = useState<number | null>(null);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function pedirConfirmacao(id: number) {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    setConfirmandoId(id);
+    confirmTimer.current = setTimeout(() => setConfirmandoId(null), 3000);
+  }
 
   const fetchTransacoes = useCallback(async () => {
     setLoading(true);
@@ -98,6 +107,22 @@ export default function Extrato({ refreshKey = 0 }: Props) {
   useEffect(() => {
     fetchTransacoes();
   }, [fetchTransacoes, refreshKey]);
+
+  async function handleDelete(id: number) {
+    if (confirmandoId !== id) {
+      pedirConfirmacao(id);
+      return;
+    }
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    setDeletandoId(id);
+    try {
+      await fetchApi(`/transacao/${id}`, { method: "DELETE" });
+      setTransacoes((prev) => prev.filter((t) => t.id !== id));
+    } finally {
+      setDeletandoId(null);
+      setConfirmandoId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -214,6 +239,7 @@ export default function Extrato({ refreshKey = 0 }: Props) {
               <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Categoria</th>
               <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Tipo</th>
               <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30 text-right">Valor</th>
+              <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -256,6 +282,19 @@ export default function Extrato({ refreshKey = 0 }: Props) {
                 >
                   {t.tipo === "entrada" ? "+" : "−"} {formatBRL(t.valor)}
                 </td>
+                <td className="px-3 py-3 text-right">
+                  <button
+                    onClick={() => handleDelete(t.id)}
+                    disabled={deletandoId === t.id}
+                    title={confirmandoId === t.id ? "Clique para confirmar" : "Excluir"}
+                    className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-40
+                      ${confirmandoId === t.id
+                        ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                        : "text-white/20 hover:text-red-400 hover:bg-red-500/10"}`}
+                  >
+                    {deletandoId === t.id ? "…" : confirmandoId === t.id ? "Confirmar" : "✕"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -266,7 +305,7 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       <ul className="sm:hidden divide-y divide-white/5 rounded-xl border border-white/8 overflow-hidden">
         {transacoesFiltradas.map((t) => (
           <li key={t.id} className="flex items-center justify-between px-4 py-3 gap-3 hover:bg-white/3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-white/80 truncate">{t.descricao}</p>
               <p className="text-xs text-white/30 mt-0.5 flex items-center gap-1.5">
                 <span>{formatData(t.data)}</span>
@@ -274,22 +313,34 @@ export default function Extrato({ refreshKey = 0 }: Props) {
                 <span>{CATEGORY_ICONS[t.categoria] ?? "💰"} {t.categoria}</span>
               </p>
             </div>
-            <div className="text-right shrink-0">
-              <p
-                className={`text-sm font-bold ${
-                  t.tipo === "entrada" ? "text-emerald-400" : "text-red-400"
-                }`}
+            <div className="text-right shrink-0 flex items-center gap-2">
+              <div>
+                <p
+                  className={`text-sm font-bold ${
+                    t.tipo === "entrada" ? "text-emerald-400" : "text-red-400"
+                  }`}
+                >
+                  {t.tipo === "entrada" ? "+" : "−"} {formatBRL(t.valor)}
+                </p>
+                <span
+                  className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-semibold
+                    ${t.tipo === "entrada"
+                      ? "bg-emerald-500/15 text-emerald-400"
+                      : "bg-red-500/15 text-red-400"}`}
+                >
+                  {t.tipo === "entrada" ? "Entrada" : "Saída"}
+                </span>
+              </div>
+              <button
+                onClick={() => handleDelete(t.id)}
+                disabled={deletandoId === t.id}
+                className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors disabled:opacity-40
+                  ${confirmandoId === t.id
+                    ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                    : "text-white/20 hover:text-red-400 hover:bg-red-500/10"}`}
               >
-                {t.tipo === "entrada" ? "+" : "−"} {formatBRL(t.valor)}
-              </p>
-              <span
-                className={`inline-block mt-0.5 rounded-full px-2 py-0.5 text-xs font-semibold
-                  ${t.tipo === "entrada"
-                    ? "bg-emerald-500/15 text-emerald-400"
-                    : "bg-red-500/15 text-red-400"}`}
-              >
-                {t.tipo === "entrada" ? "Entrada" : "Saída"}
-              </span>
+                {deletandoId === t.id ? "…" : confirmandoId === t.id ? "✓?" : "✕"}
+              </button>
             </div>
           </li>
         ))}
