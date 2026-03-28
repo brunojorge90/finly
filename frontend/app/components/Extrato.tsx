@@ -116,8 +116,11 @@ export default function Extrato({ refreshKey = 0 }: Props) {
     if (confirmTimer.current) clearTimeout(confirmTimer.current);
     setDeletandoId(id);
     try {
-      await fetchApi(`/transacao/${id}`, { method: "DELETE" });
+      const res = await fetchApi(`/transacao/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`Erro ${res.status}`);
       setTransacoes((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      // mantém a transação na lista se o backend falhou
     } finally {
       setDeletandoId(null);
       setConfirmandoId(null);
