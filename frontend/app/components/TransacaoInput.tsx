@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { fetchApi } from "../lib/auth";
 
 interface Transacao {
@@ -155,9 +156,9 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
         </div>
       )}
 
-      {/* Modal de forma de pagamento */}
-      {modalTransacao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* Modal de forma de pagamento — renderizado no body para escapar de stacking contexts */}
+      {modalTransacao && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           {/* backdrop */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -208,7 +209,8 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
               Pular
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
