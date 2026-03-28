@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import * as XLSX from "xlsx";
 import { fetchApi } from "../lib/auth";
+
+const ExtratoCharts = dynamic(() => import("./ExtratoCharts"), { ssr: false });
 
 interface Transacao {
   id: number;
@@ -11,6 +14,7 @@ interface Transacao {
   descricao: string;
   categoria: string;
   data: string;
+  pagamento?: string | null;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -133,11 +137,22 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       ? transacoes
       : transacoes.filter((t) => t.data.startsWith(mesSelecionado));
 
+  const totalVR = transacoesFiltradas
+    .filter((t) => t.pagamento === "VR")
+    .reduce((acc, t) => acc + t.valor, 0);
+
+  const totalVA = transacoesFiltradas
+    .filter((t) => t.pagamento === "VA")
+    .reduce((acc, t) => acc + t.valor, 0);
+
   const mesLabel =
     mesSelecionado === "todos" ? "todos" : labelMes(mesSelecionado).replace(" ", "-").toLowerCase();
 
   return (
     <div className="space-y-4">
+      {/* Dashboards */}
+      <ExtratoCharts transacoes={transacoesFiltradas} mesSelecionado={mesSelecionado} />
+
       {/* Header: filtro de mês + download */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Pills de mês */}
@@ -280,6 +295,53 @@ export default function Extrato({ refreshKey = 0 }: Props) {
         ))}
       </ul>
       </>
+      )}
+
+      {/* Gasto Vouchers */}
+      {(totalVR > 0 || totalVA > 0) && (
+        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">🎟️</span>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/40">
+              Gasto Vouchers
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {totalVR > 0 && (
+              <div className="flex-1 min-w-[140px] rounded-xl border border-amber-500/15
+                              bg-amber-500/8 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-400/60 mb-1">
+                  VR — Vale-Refeição
+                </p>
+                <p className="text-lg font-bold text-amber-300">
+                  {formatBRL(totalVR)}
+                </p>
+              </div>
+            )}
+            {totalVA > 0 && (
+              <div className="flex-1 min-w-[140px] rounded-xl border border-green-500/15
+                              bg-green-500/8 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-green-400/60 mb-1">
+                  VA — Vale-Alimentação
+                </p>
+                <p className="text-lg font-bold text-green-300">
+                  {formatBRL(totalVA)}
+                </p>
+              </div>
+            )}
+            {totalVR > 0 && totalVA > 0 && (
+              <div className="flex-1 min-w-[140px] rounded-xl border border-white/8
+                              bg-white/4 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">
+                  Total Vouchers
+                </p>
+                <p className="text-lg font-bold text-white/70">
+                  {formatBRL(totalVR + totalVA)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

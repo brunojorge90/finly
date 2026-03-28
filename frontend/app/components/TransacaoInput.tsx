@@ -16,11 +16,21 @@ interface Props {
   onTransacaoCriada?: (transacao: Transacao) => void;
 }
 
+const OPCOES_PAGAMENTO = [
+  { value: "VR",     label: "VR",     sub: "Vale-Refeição" },
+  { value: "VA",     label: "VA",     sub: "Vale-Alimentação" },
+  { value: "Cartao", label: "Cartão", sub: "Crédito / Débito" },
+];
+
 export default function TransacaoInput({ onTransacaoCriada }: Props) {
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmacao, setConfirmacao] = useState<Transacao | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  // modal de pagamento
+  const [modalTransacao, setModalTransacao] = useState<Transacao | null>(null);
+  const [salvandoPagamento, setSalvandoPagamento] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,14 +52,41 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
       }
 
       const transacao: Transacao = await res.json();
-      setConfirmacao(transacao);
       setTexto("");
       onTransacaoCriada?.(transacao);
+
+      if (transacao.categoria === "Alimentacao") {
+        setModalTransacao(transacao);
+      } else {
+        setConfirmacao(transacao);
+      }
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro inesperado");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handlePagamento(pagamento: string) {
+    if (!modalTransacao) return;
+    setSalvandoPagamento(true);
+    try {
+      await fetchApi(`/transacao/${modalTransacao.id}/pagamento`, {
+        method: "PATCH",
+        body: JSON.stringify({ pagamento }),
+      });
+    } catch {
+      // falha silenciosa — a transação já foi salva, só o pagamento não ficou registrado
+    } finally {
+      setConfirmacao(modalTransacao);
+      setModalTransacao(null);
+      setSalvandoPagamento(false);
+    }
+  }
+
+  function fecharModal() {
+    setConfirmacao(modalTransacao);
+    setModalTransacao(null);
   }
 
   return (
@@ -115,6 +152,62 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
                         bg-red-500/10 px-4 py-3 text-sm text-red-300">
           <span className="text-red-400 text-base leading-none mt-0.5">✕</span>
           <p>{erro}</p>
+        </div>
+      )}
+
+      {/* Modal de forma de pagamento */}
+      {modalTransacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          {/* backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={fecharModal}
+          />
+
+          <div className="relative w-full max-w-xs rounded-2xl border border-white/10
+                          bg-[#0d1629] shadow-2xl p-6">
+            {/* cabeçalho */}
+            <div className="mb-1 flex items-center gap-2">
+              <span className="text-xl">🍽️</span>
+              <h3 className="text-sm font-semibold text-white">Como foi o pagamento?</h3>
+            </div>
+            <p className="mb-5 text-xs text-white/40 truncate">
+              {modalTransacao.descricao} ·{" "}
+              <span className="text-white/60 font-medium">
+                R$ {modalTransacao.valor.toFixed(2).replace(".", ",")}
+              </span>
+            </p>
+
+            <div className="flex flex-col gap-2">
+              {OPCOES_PAGAMENTO.map((op) => (
+                <button
+                  key={op.value}
+                  disabled={salvandoPagamento}
+                  onClick={() => handlePagamento(op.value)}
+                  className="flex items-center gap-3 rounded-xl border border-white/8
+                             bg-white/4 hover:bg-white/8 hover:border-blue-500/40
+                             px-4 py-3 text-left transition-colors disabled:opacity-50"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white">{op.label}</p>
+                    <p className="text-xs text-white/40">{op.sub}</p>
+                  </div>
+                  {salvandoPagamento && (
+                    <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full
+                                     border-2 border-white/20 border-t-white/60" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={fecharModal}
+              className="mt-4 w-full rounded-xl border border-white/8 py-2.5 text-xs
+                         font-medium text-white/40 hover:text-white/70 transition-colors"
+            >
+              Pular
+            </button>
+          </div>
         </div>
       )}
     </div>

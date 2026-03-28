@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from auth import create_token, decode_token, hash_password, verify_password
 from categorizer import categorizar
 from database import (
+    atualizar_pagamento,
     buscar_transacoes,
     buscar_usuario_por_email,
     buscar_usuario_por_id,
@@ -20,6 +21,7 @@ from database import (
     resumo_por_categoria,
     saldo_atual,
     salvar_transacao,
+    totais_vouchers,
 )
 
 app = FastAPI(title="Finly API")
@@ -65,6 +67,10 @@ class RegisterBody(BaseModel):
 class LoginBody(BaseModel):
     email: str
     senha: str
+
+
+class PagamentoBody(BaseModel):
+    pagamento: str  # "VR" | "VA" | "Cartao"
 
 
 # ---------- rotas públicas ----------
@@ -143,3 +149,17 @@ def obter_mensal(user_id: int = Depends(get_current_user)):
 @app.get("/investimentos")
 def obter_investimentos(user_id: int = Depends(get_current_user)):
     return investimentos(user_id=user_id)
+
+
+@app.patch("/transacao/{transacao_id}/pagamento")
+def set_pagamento(transacao_id: int, body: PagamentoBody, user_id: int = Depends(get_current_user)):
+    if body.pagamento not in ("VR", "VA", "Cartao"):
+        raise HTTPException(status_code=422, detail="Valor de pagamento inválido")
+    if not atualizar_pagamento(transacao_id, user_id, body.pagamento):
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+    return {"ok": True}
+
+
+@app.get("/vouchers")
+def obter_vouchers(user_id: int = Depends(get_current_user)):
+    return totais_vouchers(user_id=user_id)
