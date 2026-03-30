@@ -8,39 +8,159 @@ interface Mensagem {
   content: string;
 }
 
+interface Contexto {
+  saldo: { saldo: number };
+  resumo: Record<string, number>;
+  transacoes: { tipo: string; valor: number; descricao: string; categoria: string; data: string }[];
+  investimentos: { tipo: string; valor: number; descricao: string; data: string }[];
+  mensal: { mes: string; entradas: number; saidas: number }[];
+}
+
 const SUGESTOES = [
   "Qual meu saldo atual?",
-  "Quanto gastei em Alimentação?",
+  "Quanto meu investimento pode render ao mês?",
+  "Quanto gastei em Alimentação este mês?",
   "Quais foram minhas últimas transações?",
-  "Qual categoria teve mais gastos?",
+  "Em qual categoria gasto mais?",
+  "Faça uma análise dos meus gastos",
 ];
+
+// Renderiza markdown simples sem dependência externa
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        // Heading ## ou ###
+        if (/^###\s/.test(line))
+          return <p key={i} className="font-bold text-white mt-2">{renderInline(line.replace(/^###\s/, ""))}</p>;
+        if (/^##\s/.test(line))
+          return <p key={i} className="font-bold text-blue-200 text-base mt-2">{renderInline(line.replace(/^##\s/, ""))}</p>;
+        if (/^#\s/.test(line))
+          return <p key={i} className="font-bold text-blue-100 text-lg mt-2">{renderInline(line.replace(/^#\s/, ""))}</p>;
+        // Lista com - ou *
+        if (/^[-*]\s/.test(line))
+          return (
+            <div key={i} className="flex gap-2">
+              <span className="text-blue-400 shrink-0 mt-0.5">•</span>
+              <span>{renderInline(line.replace(/^[-*]\s/, ""))}</span>
+            </div>
+          );
+        // Lista numerada
+        if (/^\d+\.\s/.test(line))
+          return (
+            <div key={i} className="flex gap-2">
+              <span className="text-blue-400 shrink-0">{line.match(/^\d+/)?.[0]}.</span>
+              <span>{renderInline(line.replace(/^\d+\.\s/, ""))}</span>
+            </div>
+          );
+        // Linha em branco
+        if (line.trim() === "") return <div key={i} className="h-1" />;
+        // Parágrafo normal
+        return <p key={i}>{renderInline(line)}</p>;
+      })}
+    </div>
+  );
+}
+
+function renderInline(text: string): React.ReactNode {
+  // Processa **bold**, *italic* e `code`
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (/^\*\*[^*]+\*\*$/.test(part))
+      return <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+    if (/^\*[^*]+\*$/.test(part))
+      return <em key={i} className="italic text-blue-200">{part.slice(1, -1)}</em>;
+    if (/^`[^`]+`$/.test(part))
+      return <code key={i} className="bg-blue-950 rounded px-1 text-xs font-mono text-emerald-300">{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
 
 export default function Chat() {
   const [mensagens, setMensagens] = useState<Mensagem[]>([
     {
       role: "assistant",
       content:
-        "Olá! 👋 Sou o Finly, seu assistente financeiro. Posso responder perguntas sobre seu saldo, gastos por categoria, histórico de transações e muito mais. Como posso ajudar?",
+        "Olá! 👋 Sou o Finly, seu assistente financeiro. Posso analisar seus gastos, investimentos, saldo e dar insights financeiros personalizados. Como posso ajudar?",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [contexto, setContexto] = useState<Contexto | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensagens]);
 
-  async function fetchContexto() {
-    const [saldoRes, resumoRes, transacoesRes] = await Promise.all([
-      fetchApi("/saldo"),
-      fetchApi("/resumo"),
-      fetchApi("/transacoes"),
-    ]);
-    const saldo = await saldoRes.json();
-    const resumo = await resumoRes.json();
-    const transacoes = await transacoesRes.json();
-    return { saldo, resumo, transacoes };
+  // Carrega o contexto uma única vez ao montar
+  useEffect(() => {
+    async function carregarContexto() {
+      try {
+        const [saldoRes, resumoRes, transacoesRes, investimentosRes, mensalRes] =
+          await Promise.all([
+            fetchApi("/saldo"),
+            fetchApi("/resumo"),
+            fetchApi("/transacoes"),
+            fetchApi("/investimentos"),
+            fetchApi("/mensal"),
+          ]);
+        const [saldo, resumo, transacoes, investimentos, mensal] = await Promise.all([
+          saldoRes.json(),
+          resumoRes.json(),
+          transacoesRes.json(),
+          investimentosRes.ok ? investimentosRes.json() : [],
+          mensalRes.ok ? mensalRes.json() : [],
+        ]);
+        setContexto({ saldo, resumo, transacoes, investimentos, mensal });
+      } catch {
+        // contexto fica null, chat ainda funciona sem dados
+      }
+    }
+    carregarContexto();
+  }, []);
+
+  function buildSystemPrompt(ctx: Contexto): string {
+    const totalInvestido = ctx.investimentos
+      .filter((t) => t.tipo === "entrada")
+      .reduce((s, t) => s + t.valor, 0);
+    const totalResgatado = ctx.investimentos
+      .filter((t) => t.tipo === "saida")
+      .reduce((s, t) => s + t.valor, 0);
+    const patrimonioLiquido = totalInvestido - totalResgatado;
+
+    const gastoTotal = Object.values(ctx.resumo).reduce((s, v) => s + v, 0);
+    const categoriaTop = Object.entries(ctx.resumo).sort((a, b) => b[1] - a[1])[0];
+
+    return `Você é o Finly, um assistente financeiro pessoal inteligente e proativo. Responda sempre em português brasileiro, de forma clara, objetiva e com formatação markdown quando útil (use **negrito**, listas, etc.).
+
+## Perfil financeiro do usuário (data de hoje: ${new Date().toLocaleDateString("pt-BR")})
+
+**Saldo em conta:** R$ ${ctx.saldo.saldo.toFixed(2)}
+**Patrimônio investido líquido:** R$ ${patrimonioLiquido.toFixed(2)} (aportado: R$ ${totalInvestido.toFixed(2)}, resgatado: R$ ${totalResgatado.toFixed(2)})
+**Total de gastos registrados:** R$ ${gastoTotal.toFixed(2)}
+${categoriaTop ? `**Maior categoria de gasto:** ${categoriaTop[0]} (R$ ${Number(categoriaTop[1]).toFixed(2)})` : ""}
+
+**Gastos por categoria:**
+${Object.entries(ctx.resumo).map(([cat, val]) => `- ${cat}: R$ ${Number(val).toFixed(2)}`).join("\n")}
+
+**Histórico mensal:**
+${ctx.mensal.map((m) => `- ${m.mes}: entradas R$ ${m.entradas?.toFixed(2) ?? "0,00"} | saídas R$ ${m.saidas?.toFixed(2) ?? "0,00"}`).join("\n")}
+
+**Últimas transações (${ctx.transacoes.length} no total):**
+${ctx.transacoes.slice(0, 20).map((t) => `- [${t.data}] ${t.tipo === "entrada" ? "+" : "-"} R$ ${t.valor.toFixed(2)} | ${t.descricao} (${t.categoria})`).join("\n")}
+
+**Histórico de investimentos:**
+${ctx.investimentos.map((t) => `- [${t.data}] ${t.tipo === "entrada" ? "Aporte" : "Resgate"} R$ ${t.valor.toFixed(2)} | ${t.descricao}`).join("\n") || "Nenhum investimento registrado."}
+
+## Instruções
+- Responda com base nos dados acima quando disponíveis.
+- Para cálculos de rendimento, use taxas reais do mercado brasileiro: CDI ~10,65% a.a., Tesouro Selic ~10,65% a.a., CDB 100% CDI ~10,65% a.a., poupança ~6,17% a.a. Mostre o cálculo mensal: taxa_mensal = (1 + taxa_anual)^(1/12) - 1.
+- Para análises, seja proativo: aponte padrões, alertas de gastos, oportunidades de economia.
+- Se o usuário pedir uma análise geral, estruture com: resumo do saldo, maiores gastos, evolução mensal, e sugestões de melhoria.
+- Use formatação markdown para tornar respostas longas mais legíveis.`;
   }
 
   async function enviar(texto?: string) {
@@ -56,16 +176,9 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const ctx = await fetchContexto();
-
-      const systemPrompt = `Você é o Finly, um assistente financeiro pessoal. Responda em português, de forma clara e objetiva.
-
-Dados financeiros atuais do usuário:
-- Saldo atual: R$ ${ctx.saldo.saldo.toFixed(2)}
-- Resumo por categoria: ${JSON.stringify(ctx.resumo)}
-- Últimas transações: ${JSON.stringify(ctx.transacoes.slice(0, 10))}
-
-Responda apenas com base nesses dados. Se não souber, diga que não tem informação suficiente.`;
+      const systemPrompt = contexto
+        ? buildSystemPrompt(contexto)
+        : "Você é o Finly, um assistente financeiro pessoal. Responda em português. Os dados financeiros do usuário ainda estão carregando.";
 
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
@@ -78,6 +191,10 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
               role: m.role === "assistant" ? "model" : "user",
               parts: [{ text: m.content }],
             })),
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+            },
           }),
         }
       );
@@ -85,7 +202,7 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
       const data = await res.json();
       const resposta =
         data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-        "Não consegui gerar uma resposta.";
+        "Não consegui gerar uma resposta. Tente novamente.";
 
       setMensagens((prev) => [
         ...prev,
@@ -96,7 +213,7 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
         ...prev,
         {
           role: "assistant",
-          content: "Ocorreu um erro ao consultar o assistente. Tente novamente.",
+          content: "Ocorreu um erro ao consultar o assistente. Verifique sua conexão e tente novamente.",
         },
       ]);
     } finally {
@@ -106,6 +223,14 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
 
   return (
     <div className="flex flex-col h-[calc(100dvh-180px)] sm:h-[calc(100vh-160px)] min-h-[400px]">
+      {/* Indicador de contexto carregado */}
+      {!contexto && (
+        <div className="text-xs text-blue-400/60 text-center mb-2 flex items-center justify-center gap-1">
+          <span className="inline-block h-2 w-2 animate-spin rounded-full border border-blue-400/40 border-t-blue-400" />
+          Carregando seus dados financeiros…
+        </div>
+      )}
+
       {/* Histórico */}
       <div className="flex-1 overflow-y-auto space-y-4 p-4 rounded-2xl bg-blue-950/40 border border-blue-800/40 mb-4">
         {mensagens.map((m, i) => (
@@ -119,13 +244,16 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
               </div>
             )}
             <div
-              className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
+              className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed
                 ${m.role === "user"
-                  ? "bg-blue-500 text-white rounded-br-sm"
+                  ? "bg-blue-500 text-white rounded-br-sm whitespace-pre-wrap"
                   : "bg-blue-900/60 text-blue-100 border border-blue-700/40 rounded-bl-sm"
                 }`}
             >
-              {m.content}
+              {m.role === "assistant"
+                ? <MarkdownText text={m.content} />
+                : m.content
+              }
             </div>
           </div>
         ))}
@@ -176,7 +304,7 @@ Responda apenas com base nesses dados. Se não souber, diga que não tem informa
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pergunte sobre seus gastos, saldo, categorias…"
+          placeholder="Pergunte sobre gastos, investimentos, saldo…"
           disabled={loading}
           className="flex-1 rounded-xl border border-blue-700/50 bg-blue-950/50 px-4 py-3 text-sm
                      text-white placeholder-blue-400 focus:outline-none focus:ring-2
