@@ -180,29 +180,16 @@ ${ctx.investimentos.map((t) => `- [${t.data}] ${t.tipo === "entrada" ? "Aporte" 
         ? buildSystemPrompt(contexto)
         : "Você é o Finly, um assistente financeiro pessoal. Responda em português. Os dados financeiros do usuário ainda estão carregando.";
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.NEXT_PUBLIC_GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: novasMensagens.map((m) => ({
-              role: m.role === "assistant" ? "model" : "user",
-              parts: [{ text: m.content }],
-            })),
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
-            },
-          }),
-        }
-      );
+      const res = await fetchApi("/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mensagens: novasMensagens,
+          systemPrompt,
+        }),
+      });
 
       const data = await res.json();
-      const resposta =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-        "Não consegui gerar uma resposta. Tente novamente.";
+      const resposta = data?.resposta ?? "Não consegui gerar uma resposta. Tente novamente.";
 
       setMensagens((prev) => [
         ...prev,

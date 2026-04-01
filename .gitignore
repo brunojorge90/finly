@@ -8,3 +8,5 @@ finance.db
 .next/
 .claude/
 uvicorn.log
+
+.vercel

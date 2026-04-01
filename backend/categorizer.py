@@ -58,6 +58,20 @@ _prompt = ChatPromptTemplate.from_messages(
 _chain = _prompt | llm.with_structured_output(TransacaoSchema)
 
 
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+
+def responder_chat(mensagens: list, system_prompt: str) -> str:
+    history = [SystemMessage(content=system_prompt)]
+    for m in mensagens:
+        if m["role"] == "user":
+            history.append(HumanMessage(content=m["content"]))
+        else:
+            history.append(AIMessage(content=m["content"]))
+    
+    resposta = llm.invoke(history)
+    return resposta.content
+
+
 def categorizar(texto: str) -> Transacao:
     # Obtém a hora atual em Brasília
     agora_br = datetime.now(TZ_BRASILIA)

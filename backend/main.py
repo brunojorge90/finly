@@ -74,6 +74,16 @@ class PagamentoBody(BaseModel):
     pagamento: str  # "VR" | "VA" | "Cartao"
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatBody(BaseModel):
+    mensagens: list[ChatMessage]
+    systemPrompt: str
+
+
 # ---------- rotas públicas ----------
 
 @app.get("/health")
@@ -164,6 +174,14 @@ def set_pagamento(transacao_id: int, body: PagamentoBody, user_id: int = Depends
     if body.pagamento not in ("VR", "VA", "Cartao"):
         raise HTTPException(status_code=422, detail="Valor de pagamento inválido")
     if not atualizar_pagamento(transacao_id, user_id, body.pagamento):
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+    return {"ok": True}
+
+
+@app.get("/vouchers")
+def obter_vouchers(user_id: int = Depends(get_current_user)):
+    return totais_vouchers(user_id=user_id)
+ if not atualizar_pagamento(transacao_id, user_id, body.pagamento):
         raise HTTPException(status_code=404, detail="Transação não encontrada")
     return {"ok": True}
 
