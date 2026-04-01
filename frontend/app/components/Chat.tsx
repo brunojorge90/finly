@@ -107,13 +107,22 @@ export default function Chat() {
             fetchApi("/investimentos"),
             fetchApi("/mensal"),
           ]);
-        const [saldo, resumo, transacoes, investimentos, mensal] = await Promise.all([
+        const [saldo, resumoData, transacoes, investimentos, mensal] = await Promise.all([
           saldoRes.json(),
           resumoRes.json(),
           transacoesRes.json(),
           investimentosRes.ok ? investimentosRes.json() : [],
           mensalRes.ok ? mensalRes.json() : [],
         ]);
+
+        // Transforma a lista de resumo do backend em um Record<string, number> (apenas saídas)
+        const resumo: Record<string, number> = {};
+        resumoData.forEach((item: any) => {
+          if (item.tipo === "saida") {
+            resumo[item.categoria] = (resumo[item.categoria] || 0) + item.total;
+          }
+        });
+
         setContexto({ saldo, resumo, transacoes, investimentos, mensal });
       } catch {
         // contexto fica null, chat ainda funciona sem dados
@@ -189,18 +198,23 @@ ${ctx.investimentos.map((t) => `- [${t.data}] ${t.tipo === "entrada" ? "Aporte" 
       });
 
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.detail || `Erro do servidor: ${res.status}`);
+      }
+
       const resposta = data?.resposta ?? "Não consegui gerar uma resposta. Tente novamente.";
 
       setMensagens((prev) => [
         ...prev,
         { role: "assistant", content: resposta },
       ]);
-    } catch {
+    } catch (err: any) {
       setMensagens((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Ocorreu um erro ao consultar o assistente. Verifique sua conexão e tente novamente.",
+          content: `❌ Ocorreu um erro: ${err.message || "Erro ao consultar o assistente."} Verifique sua conexão e tente novamente.`,
         },
       ]);
     } finally {

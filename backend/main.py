@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from auth import create_token, decode_token, hash_password, verify_password
-from categorizer import categorizar
+from categorizer import categorizar, responder_chat
 from database import (
     atualizar_pagamento,
     buscar_transacoes,
@@ -111,6 +111,16 @@ def login(body: LoginBody):
 
 # ---------- rotas protegidas ----------
 
+@app.post("/chat")
+def chat(body: ChatBody, user_id: int = Depends(get_current_user)):
+    try:
+        mensagens_dict = [{"role": m.role, "content": m.content} for m in body.mensagens]
+        resposta = responder_chat(mensagens_dict, body.systemPrompt)
+        return {"resposta": resposta}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post("/transacao", status_code=201)
 def criar_transacao(body: TextoLivre, user_id: int = Depends(get_current_user)):
     try:
@@ -174,14 +184,6 @@ def set_pagamento(transacao_id: int, body: PagamentoBody, user_id: int = Depends
     if body.pagamento not in ("VR", "VA", "Cartao"):
         raise HTTPException(status_code=422, detail="Valor de pagamento inválido")
     if not atualizar_pagamento(transacao_id, user_id, body.pagamento):
-        raise HTTPException(status_code=404, detail="Transação não encontrada")
-    return {"ok": True}
-
-
-@app.get("/vouchers")
-def obter_vouchers(user_id: int = Depends(get_current_user)):
-    return totais_vouchers(user_id=user_id)
- if not atualizar_pagamento(transacao_id, user_id, body.pagamento):
         raise HTTPException(status_code=404, detail="Transação não encontrada")
     return {"ok": True}
 
