@@ -11,6 +11,9 @@ interface Transacao {
   descricao: string;
   categoria: string;
   data: string;
+  parcela_grupo?: string | null;
+  parcela_num?: number | null;
+  parcela_total?: number | null;
 }
 
 interface Props {
@@ -23,6 +26,20 @@ const OPCOES_PAGAMENTO = [
   { value: "Cartao", label: "Cartão", sub: "Crédito / Débito" },
 ];
 
+const MESES_PT = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+
+function formatBRL(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function nomeMesCurto(dataStr: string): string {
+  const [ano, mes] = dataStr.split("-");
+  return `${MESES_PT[parseInt(mes) - 1]} ${ano}`;
+}
+
 export default function TransacaoInput({ onTransacaoCriada }: Props) {
   const [texto, setTexto] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +49,7 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
   // modal de pagamento
   const [modalTransacao, setModalTransacao] = useState<Transacao | null>(null);
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+  const [confirmacaoParcelada, setConfirmacaoParcelada] = useState<Transacao[] | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +57,7 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
 
     setLoading(true);
     setConfirmacao(null);
+    setConfirmacaoParcelada(null);
     setErro(null);
 
     try {
@@ -52,8 +71,20 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
         throw new Error(data.detail ?? `Erro ${res.status}`);
       }
 
-      const transacao: Transacao = await res.json();
+      const data = await res.json();
       setTexto("");
+
+      // Compra parcelada — resposta é uma lista
+      if (Array.isArray(data)) {
+        const parcelas: Transacao[] = data;
+        setConfirmacaoParcelada(parcelas);
+        setConfirmacao(null);
+        onTransacaoCriada?.(parcelas[0]);
+        return;
+      }
+
+      // Transação normal
+      const transacao: Transacao = data;
       onTransacaoCriada?.(transacao);
 
       if (transacao.categoria === "Alimentacao") {
@@ -143,6 +174,25 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
               </span>
               <span className="mx-1 text-white/20">·</span>
               <span className="text-white/50">{confirmacao.categoria}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {confirmacaoParcelada && (
+        <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-500/20
+                        bg-blue-500/10 px-4 py-3 text-sm">
+          <span className="text-blue-400 text-base leading-none mt-0.5">✓</span>
+          <div>
+            <p className="font-medium text-blue-300">
+              Compra parcelada criada: {confirmacaoParcelada.length}x{" "}
+              {formatBRL(confirmacaoParcelada[0].valor)}/parcela
+            </p>
+            <p className="text-blue-400/80 mt-0.5 text-xs">
+              Lançada de {nomeMesCurto(confirmacaoParcelada[0].data)} até{" "}
+              {nomeMesCurto(confirmacaoParcelada[confirmacaoParcelada.length - 1].data)}
+              <span className="mx-1 text-white/20">·</span>
+              <span className="text-white/50">{confirmacaoParcelada[0].categoria}</span>
             </p>
           </div>
         </div>

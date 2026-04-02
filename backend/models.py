@@ -24,3 +24,4 @@ class Transacao:
     categoria: Categoria
     data:      datetime = field(default_factory=datetime.now)
     id:        int | None = None
+    parcelas:  int = 1

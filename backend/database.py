@@ -66,14 +66,17 @@ def init_db():
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS transacoes (
-                    id        SERIAL PRIMARY KEY,
-                    user_id   INTEGER NOT NULL,
-                    tipo      TEXT    NOT NULL CHECK (tipo IN ('entrada', 'saida')),
-                    valor     NUMERIC NOT NULL,
-                    descricao TEXT    NOT NULL,
-                    categoria TEXT    NOT NULL,
-                    data      TEXT    NOT NULL,
-                    pagamento TEXT    DEFAULT NULL,
+                    id             SERIAL  PRIMARY KEY,
+                    user_id        INTEGER NOT NULL,
+                    tipo           TEXT    NOT NULL CHECK (tipo IN ('entrada', 'saida')),
+                    valor          NUMERIC NOT NULL,
+                    descricao      TEXT    NOT NULL,
+                    categoria      TEXT    NOT NULL,
+                    data           TEXT    NOT NULL,
+                    pagamento      TEXT    DEFAULT NULL,
+                    parcela_grupo  TEXT    DEFAULT NULL,
+                    parcela_num    INTEGER DEFAULT NULL,
+                    parcela_total  INTEGER DEFAULT NULL,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
@@ -88,19 +91,34 @@ def init_db():
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS transacoes (
-                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id   INTEGER NOT NULL,
-                    tipo      TEXT    NOT NULL CHECK (tipo IN ('entrada', 'saida')),
-                    valor     REAL    NOT NULL,
-                    descricao TEXT    NOT NULL,
-                    categoria TEXT    NOT NULL,
-                    data      TEXT    NOT NULL,
-                    pagamento TEXT    DEFAULT NULL,
+                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id        INTEGER NOT NULL,
+                    tipo           TEXT    NOT NULL CHECK (tipo IN ('entrada', 'saida')),
+                    valor          REAL    NOT NULL,
+                    descricao      TEXT    NOT NULL,
+                    categoria      TEXT    NOT NULL,
+                    data           TEXT    NOT NULL,
+                    pagamento      TEXT    DEFAULT NULL,
+                    parcela_grupo  TEXT    DEFAULT NULL,
+                    parcela_num    INTEGER DEFAULT NULL,
+                    parcela_total  INTEGER DEFAULT NULL,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
             try:
                 cur.execute("ALTER TABLE transacoes ADD COLUMN pagamento TEXT DEFAULT NULL")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                cur.execute("ALTER TABLE transacoes ADD COLUMN parcela_grupo TEXT DEFAULT NULL")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                cur.execute("ALTER TABLE transacoes ADD COLUMN parcela_num INTEGER DEFAULT NULL")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                cur.execute("ALTER TABLE transacoes ADD COLUMN parcela_total INTEGER DEFAULT NULL")
             except sqlite3.OperationalError:
                 pass
 
@@ -140,20 +158,43 @@ def buscar_usuario_por_id(user_id: int) -> dict | None:
 def salvar_transacao(
     user_id: int, tipo: str, valor: float,
     descricao: str, categoria: str, data: str | None = None,
+    parcela_grupo: str | None = None,
+    parcela_num: int | None = None,
+    parcela_total: int | None = None,
 ) -> int:
     if data is None:
         data = datetime.now().strftime("%Y-%m-%d")
     with _cur() as cur:
         sql = (
-            f"INSERT INTO transacoes (user_id, tipo, valor, descricao, categoria, data) "
-            f"VALUES ({P},{P},{P},{P},{P},{P})"
+            f"INSERT INTO transacoes "
+            f"(user_id, tipo, valor, descricao, categoria, data, parcela_grupo, parcela_num, parcela_total) "
+            f"VALUES ({P},{P},{P},{P},{P},{P},{P},{P},{P})"
         )
+        args = (user_id, tipo, valor, descricao, categoria, data, parcela_grupo, parcela_num, parcela_total)
         if DATABASE_URL:
-            cur.execute(sql + " RETURNING id", (user_id, tipo, valor, descricao, categoria, data))
+            cur.execute(sql + " RETURNING id", args)
             return cur.fetchone()["id"]
         else:
-            cur.execute(sql, (user_id, tipo, valor, descricao, categoria, data))
+            cur.execute(sql, args)
             return cur.lastrowid
+
+
+def deletar_grupo_parcelas(transacao_id: int, user_id: int) -> int:
+    """Deleta todas as parcelas do mesmo grupo. Retorna o número de linhas deletadas."""
+    with _cur() as cur:
+        cur.execute(
+            f"SELECT parcela_grupo FROM transacoes WHERE id = {P} AND user_id = {P}",
+            (transacao_id, user_id),
+        )
+        row = _row(cur.fetchone())
+        if not row or not row["parcela_grupo"]:
+            return 0
+        grupo = row["parcela_grupo"]
+        cur.execute(
+            f"DELETE FROM transacoes WHERE parcela_grupo = {P} AND user_id = {P}",
+            (grupo, user_id),
+        )
+        return cur.rowcount
 
 
 def deletar_transacao(transacao_id: int, user_id: int) -> bool:

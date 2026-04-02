@@ -15,6 +15,9 @@ interface Transacao {
   categoria: string;
   data: string;
   pagamento?: string | null;
+  parcela_grupo?: string | null;
+  parcela_num?: number | null;
+  parcela_total?: number | null;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -56,6 +59,10 @@ function getMesesDisponiveis(transacoes: Transacao[]): string[] {
 function labelMes(ym: string) {
   const [year, month] = ym.split("-");
   return `${MESES[parseInt(month) - 1]} ${year}`;
+}
+
+function descricaoBase(descricao: string): string {
+  return descricao.replace(/\s+\d+\/\d+$/, "");
 }
 
 function downloadExcel(transacoes: Transacao[], mesLabel: string) {
@@ -172,6 +179,17 @@ export default function Extrato({ refreshKey = 0 }: Props) {
   const totalVA = transacoesFiltradas
     .filter((t) => t.pagamento === "VA")
     .reduce((acc, t) => acc + t.valor, 0);
+
+  // Agrupa parcelas do período por parcela_grupo
+  const parcelasNoMes = transacoesFiltradas.filter((t) => t.parcela_grupo);
+  const gruposMap = new Map<string, Transacao[]>();
+  for (const t of parcelasNoMes) {
+    const key = t.parcela_grupo!;
+    if (!gruposMap.has(key)) gruposMap.set(key, []);
+    gruposMap.get(key)!.push(t);
+  }
+  const gruposCredito = Array.from(gruposMap.values());
+  const totalCredito = parcelasNoMes.reduce((acc, t) => acc + t.valor, 0);
 
   const mesLabel =
     mesSelecionado === "todos" ? "todos" : labelMes(mesSelecionado).replace(" ", "-").toLowerCase();
@@ -394,6 +412,43 @@ export default function Extrato({ refreshKey = 0 }: Props) {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Compras no Crédito */}
+      {gruposCredito.length > 0 && (
+        <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">💳</span>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-white/40">
+              Compras no Crédito
+            </h3>
+          </div>
+          <div className="space-y-2 mb-3">
+            {gruposCredito.map((grupo) => {
+              const primeira = grupo[0];
+              return (
+                <div
+                  key={primeira.parcela_grupo}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="text-sm text-white/70 truncate">
+                    {descricaoBase(primeira.descricao)}
+                  </span>
+                  <span className="text-xs text-white/40 shrink-0">
+                    {primeira.parcela_total}x {formatBRL(primeira.valor)}/parcela
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-white/8 pt-3 flex justify-between items-center">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-white/30">
+              Total no mês
+            </span>
+            <span className="text-base font-bold text-blue-300">
+              {formatBRL(totalCredito)}
+            </span>
           </div>
         </div>
       )}

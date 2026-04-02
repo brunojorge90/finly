@@ -19,7 +19,7 @@ TZ_BRASILIA = timezone(timedelta(hours=-3))
 
 class TransacaoSchema(BaseModel):
     tipo: str = Field(description="'entrada' para receitas, 'saida' para despesas")
-    valor: float = Field(description="Valor numérico positivo da transação")
+    valor: float = Field(description="Valor numérico TOTAL positivo da transação. Se for parcelado, retorne o valor total, não o valor da parcela.")
     descricao: str = Field(description="Descrição resumida da transação")
     categoria: str = Field(
         description=(
@@ -29,6 +29,10 @@ class TransacaoSchema(BaseModel):
     )
     data: str = Field(
         description="Data da transação no formato YYYY-MM-DD. Se o usuário disser 'ontem', 'anteontem' ou uma data específica, calcule-a com base na data de hoje. Se não houver menção à data, use a data de hoje."
+    )
+    parcelas: int = Field(
+        default=1,
+        description="Número de parcelas. Detecte padrões como '6x', 'x6', 'em 6x', 'parcelado em 6 vezes'. Se não houver parcelamento, retorne 1."
     )
 
 
@@ -42,14 +46,18 @@ _prompt = ChatPromptTemplate.from_messages(
                 "Data de hoje: {hoje}\n\n"
                 "Regras:\n"
                 "- tipo: 'entrada' para receitas/ganhos, 'saida' para despesas/gastos\n"
-                "- valor: número positivo (converta 'reais'/'R$' para float)\n"
+                "- valor: número positivo TOTAL (converta 'reais'/'R$' para float). Se parcelado, retorne o valor total.\n"
                 "- descricao: texto curto e claro descrevendo a transação\n"
                 "- categoria: escolha a mais adequada entre as disponíveis\n"
-                "- data: calcule a data correta baseada no texto do usuário e na data de hoje.\n\n"
+                "- data: calcule a data correta baseada no texto do usuário e na data de hoje.\n"
+                "- parcelas: número de parcelas. Detecte '6x', 'x6', 'em 6x', '6 vezes', 'parcelado em 6'. Sem parcelamento = 1.\n\n"
                 "Exemplos:\n"
-                "  'gasto coca 3 reais' → saida, 3.0, 'Coca-Cola', Alimentacao, {hoje}\n"
-                "  'recebi salário 5000' → entrada, 5000.0, 'Salário', Salario, {hoje}\n"
-                "  'uber 15 reais ontem' → saida, 15.0, 'Uber', Transporte, (data de ontem)"
+                "  'gasto coca 3 reais' → saida, 3.0, 'Coca-Cola', Alimentacao, {hoje}, parcelas=1\n"
+                "  'recebi salário 5000' → entrada, 5000.0, 'Salário', Salario, {hoje}, parcelas=1\n"
+                "  'uber 15 reais ontem' → saida, 15.0, 'Uber', Transporte, (data de ontem), parcelas=1\n"
+                "  'roupa 400 6x' → saida, 400.0, 'Roupa', Outros, {hoje}, parcelas=6\n"
+                "  'iPhone 2500 em 12x' → saida, 2500.0, 'iPhone', Outros, {hoje}, parcelas=12\n"
+                "  'geladeira 1800 parcelado em 10 vezes' → saida, 1800.0, 'Geladeira', Moradia, {hoje}, parcelas=10"
             ),
         ),
         ("human", "{texto}"),
@@ -100,4 +108,5 @@ def categorizar(texto: str) -> Transacao:
         descricao=resultado.descricao,
         categoria=Categoria(resultado.categoria),
         data=data_transacao,
+        parcelas=resultado.parcelas,
     )

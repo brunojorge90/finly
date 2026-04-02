@@ -1,5 +1,7 @@
 import os
+import uuid
 from dotenv import load_dotenv
+from dateutil.relativedelta import relativedelta
 load_dotenv()
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -12,6 +14,7 @@ from categorizer import categorizar, responder_chat
 from database import (
     atualizar_pagamento,
     buscar_transacoes,
+    deletar_grupo_parcelas,
     deletar_transacao,
     buscar_usuario_por_email,
     buscar_usuario_por_id,
@@ -128,6 +131,45 @@ def criar_transacao(body: TextoLivre, user_id: int = Depends(get_current_user)):
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
+    # Compra parcelada — cria N transações com datas incrementais
+    if transacao.parcelas > 1:
+        data_base = transacao.data
+        grupo_id = str(uuid.uuid4())
+        valor_parcela = round(transacao.valor / transacao.parcelas, 2)
+        resultado = []
+
+        for i in range(transacao.parcelas):
+            data_parcela = data_base + relativedelta(months=i)
+            data_str = data_parcela.strftime("%Y-%m-%d")
+            descricao_parcela = f"{transacao.descricao} {i + 1}/{transacao.parcelas}"
+
+            id_criado = salvar_transacao(
+                user_id=user_id,
+                tipo=transacao.tipo,
+                valor=valor_parcela,
+                descricao=descricao_parcela,
+                categoria=transacao.categoria.value,
+                data=data_str,
+                parcela_grupo=grupo_id,
+                parcela_num=i + 1,
+                parcela_total=transacao.parcelas,
+            )
+
+            resultado.append({
+                "id": id_criado,
+                "tipo": transacao.tipo,
+                "valor": valor_parcela,
+                "descricao": descricao_parcela,
+                "categoria": transacao.categoria.value,
+                "data": data_str,
+                "parcela_grupo": grupo_id,
+                "parcela_num": i + 1,
+                "parcela_total": transacao.parcelas,
+            })
+
+        return resultado
+
+    # Transação normal — fluxo original
     id_criado = salvar_transacao(
         user_id=user_id,
         tipo=transacao.tipo,
@@ -177,6 +219,14 @@ def remover_transacao(transacao_id: int, user_id: int = Depends(get_current_user
     if not deletar_transacao(transacao_id, user_id):
         raise HTTPException(status_code=404, detail="Transação não encontrada")
     return {"ok": True}
+
+
+@app.delete("/transacao/{transacao_id}/grupo", status_code=200)
+def remover_grupo_parcelas(transacao_id: int, user_id: int = Depends(get_current_user)):
+    count = deletar_grupo_parcelas(transacao_id, user_id)
+    if count == 0:
+        raise HTTPException(status_code=404, detail="Grupo de parcelas não encontrado")
+    return {"ok": True, "deletadas": count}
 
 
 @app.patch("/transacao/{transacao_id}/pagamento")
