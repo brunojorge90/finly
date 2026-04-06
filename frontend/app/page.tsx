@@ -39,6 +39,8 @@ export default function Page() {
       setAuthed(true);
       const user = getUser();
       if (user) setNomeUsuario(user.nome);
+      // Acorda o backend (Render free tier dorme após 15min)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`).catch(() => {});
     }
   }, [router]);
 

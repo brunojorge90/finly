@@ -42,7 +42,16 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  const doFetch = () => fetch(`${API}${path}`, { ...options, headers });
+
+  let res: Response;
+  try {
+    res = await doFetch();
+  } catch {
+    // Backend pode estar acordando (Render free tier) — aguarda 8s e tenta de novo
+    await new Promise(r => setTimeout(r, 8000));
+    res = await doFetch();
+  }
 
   if (res.status === 401) {
     clearAuth();
