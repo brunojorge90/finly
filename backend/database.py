@@ -80,6 +80,17 @@ def init_db():
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
+            # Migrações: adiciona colunas se não existirem
+            for col, definition in [
+                ("pagamento",     "TEXT DEFAULT NULL"),
+                ("parcela_grupo", "TEXT DEFAULT NULL"),
+                ("parcela_num",   "INTEGER DEFAULT NULL"),
+                ("parcela_total", "INTEGER DEFAULT NULL"),
+            ]:
+                cur.execute(f"""
+                    ALTER TABLE transacoes
+                    ADD COLUMN IF NOT EXISTS {col} {definition}
+                """)
         else:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
