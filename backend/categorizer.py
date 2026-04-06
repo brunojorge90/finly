@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
-from typing import Union
 from pydantic import BaseModel, Field, field_validator
 
 from models import Categoria, Transacao
@@ -39,7 +38,7 @@ class TransacaoSchema(BaseModel):
     data: str = Field(
         description="Data da transação no formato YYYY-MM-DD. Se o usuário disser 'ontem', 'anteontem' ou uma data específica, calcule-a com base na data de hoje. Se não houver menção à data, use a data de hoje."
     )
-    parcelas: Union[int, str] = Field(
+    parcelas: int = Field(
         default=1,
         description="Número de parcelas como número inteiro. Detecte padrões como '6x', 'x6', 'em 6x', 'parcelado em 6 vezes'. Se não houver parcelamento, retorne 1."
     )
@@ -82,7 +81,7 @@ _prompt = ChatPromptTemplate.from_messages(
 )
 
 def _get_chain():
-    return _prompt | _get_llm().with_structured_output(TransacaoSchema)
+    return _prompt | _get_llm().with_structured_output(TransacaoSchema, method="json_mode")
 
 
 
