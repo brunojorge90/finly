@@ -8,6 +8,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "finly-dev-secret-2024")
 ALGORITHM = "HS256"
 EXPIRE_DAYS = 30
 
+# Workaround: passlib 1.7.4 não detecta bcrypt 4.x corretamente
+import bcrypt as _bcrypt
+if not hasattr(_bcrypt, "__version__"):
+    _bcrypt.__version__ = "4.0.1"
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
