@@ -62,7 +62,7 @@ _prompt = ChatPromptTemplate.from_messages(
                 "os dados da transação financeira. Responda APENAS com um objeto JSON válido.\n\n"
                 "Data de hoje: {hoje}\n\n"
                 "Regras:\n"
-                "- tipo: 'entrada' para receitas/ganhos, 'saida' para despesas/gastos\n"
+                "- tipo: USE 'saida' por padrão para qualquer gasto/despesa/compra/pagamento/conta/mensalidade. Use 'entrada' APENAS quando houver palavra explícita de receita: recebi, salário, freelance, renda, depósito, pagamento recebido\n"
                 "- valor: número positivo TOTAL (converta 'reais'/'R$' para float). Se parcelado, retorne o valor total.\n"
                 "- descricao: texto curto e claro descrevendo a transação\n"
                 "- categoria: escolha a mais adequada entre as disponíveis\n"
