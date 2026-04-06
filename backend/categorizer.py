@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
+import unicodedata
 
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -99,11 +100,20 @@ def categorizar(texto: str) -> Transacao:
         # Se a IA falhar em retornar uma data válida, usa o momento atual de Brasília
         data_transacao = agora_br
 
+    # Normaliza categoria: remove acentos e espaços para garantir match com o enum
+    categoria_raw = unicodedata.normalize("NFD", resultado.categoria)
+    categoria_str = "".join(c for c in categoria_raw if unicodedata.category(c) != "Mn")
+
+    try:
+        categoria = Categoria(categoria_str)
+    except ValueError:
+        categoria = Categoria.Outros
+
     return Transacao(
         tipo=resultado.tipo,
         valor=resultado.valor,
         descricao=resultado.descricao,
-        categoria=Categoria(resultado.categoria),
+        categoria=categoria,
         data=data_transacao,
         parcelas=resultado.parcelas,
     )
