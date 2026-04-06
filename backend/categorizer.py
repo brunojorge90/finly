@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
+from typing import Union
 from pydantic import BaseModel, Field, field_validator
 
 from models import Categoria, Transacao
@@ -38,18 +39,18 @@ class TransacaoSchema(BaseModel):
     data: str = Field(
         description="Data da transação no formato YYYY-MM-DD. Se o usuário disser 'ontem', 'anteontem' ou uma data específica, calcule-a com base na data de hoje. Se não houver menção à data, use a data de hoje."
     )
-    parcelas: int = Field(
+    parcelas: Union[int, str] = Field(
         default=1,
-        description="Número de parcelas. Detecte padrões como '6x', 'x6', 'em 6x', 'parcelado em 6 vezes'. Se não houver parcelamento, retorne 1."
+        description="Número de parcelas como número inteiro. Detecte padrões como '6x', 'x6', 'em 6x', 'parcelado em 6 vezes'. Se não houver parcelamento, retorne 1."
     )
 
-    @field_validator("parcelas", "valor", mode="before")
+    @field_validator("parcelas", mode="before")
     @classmethod
-    def coerce_number(cls, v):
+    def coerce_parcelas(cls, v):
         try:
-            return int(v) if isinstance(v, str) and "." not in str(v) else float(v) if isinstance(v, str) else v
+            return int(v)
         except (ValueError, TypeError):
-            return v
+            return 1
 
 
 _prompt = ChatPromptTemplate.from_messages(
