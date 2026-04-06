@@ -10,11 +10,19 @@ from models import Categoria, Transacao
 
 load_dotenv()
 
-api_key = os.getenv("GROQ_API_KEY")
-llm = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=api_key)
-
 # Fuso horário de Brasília (UTC-3)
 TZ_BRASILIA = timezone(timedelta(hours=-3))
+
+_llm = None
+
+def _get_llm():
+    global _llm
+    if _llm is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY não configurada")
+        _llm = ChatGroq(model="llama-3.1-8b-instant", groq_api_key=api_key)
+    return _llm
 
 
 class TransacaoSchema(BaseModel):
@@ -64,7 +72,8 @@ _prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-_chain = _prompt | llm.with_structured_output(TransacaoSchema)
+def _get_chain():
+    return _prompt | _get_llm().with_structured_output(TransacaoSchema)
 
 
 
@@ -73,7 +82,7 @@ def categorizar(texto: str) -> Transacao:
     agora_br = datetime.now(TZ_BRASILIA)
     hoje = agora_br.strftime("%Y-%m-%d")
     
-    resultado: TransacaoSchema = _chain.invoke({"texto": texto, "hoje": hoje})
+    resultado: TransacaoSchema = _get_chain().invoke({"texto": texto, "hoje": hoje})
     
     try:
         # Tenta converter a data retornada pela IA de volta para datetime
