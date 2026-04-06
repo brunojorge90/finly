@@ -11,7 +11,7 @@ from models import Categoria, Transacao
 load_dotenv()
 
 api_key = os.getenv("GOOGLE_API_KEY")
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", google_api_key=api_key)
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=api_key)
 
 # Fuso horário de Brasília (UTC-3)
 TZ_BRASILIA = timezone(timedelta(hours=-3))
