@@ -27,21 +27,26 @@ def _get_llm():
 
 
 class TransacaoSchema(BaseModel):
-    tipo: str = Field(description="'entrada' para receitas, 'saida' para despesas")
-    valor: float = Field(description="Valor numérico TOTAL positivo da transação. Se for parcelado, retorne o valor total, não o valor da parcela.")
+    intencao: str = Field(
+        default="nova",
+        description="'nova' para nova transação normal. 'atualizacao' quando o usuário diz 'atualizar', 'tenho X investido', 'meu investimento agora é X', 'atualize meu investimento'."
+    )
+    tipo: str = Field(description="'entrada' para receitas, 'saida' para despesas. Ignorado quando intencao='atualizacao'.")
+    valor: float = Field(description="Valor numérico positivo. Quando intencao='atualizacao', é o NOVO TOTAL do investimento.")
     descricao: str = Field(description="Descrição resumida da transação")
     categoria: str = Field(
         description=(
             "Uma das categorias: Alimentacao, Transporte, Moradia, Saude, Lazer, "
-            "Educacao, Salario, Freelance, Investimentos, Outros"
+            "Educacao, Salario, Freelance, Investimentos, Outros. "
+            "Quando intencao='atualizacao', sempre use Investimentos."
         )
     )
     data: str = Field(
-        description="Data da transação no formato YYYY-MM-DD. Se o usuário disser 'ontem', 'anteontem' ou uma data específica, calcule-a com base na data de hoje. Se não houver menção à data, use a data de hoje."
+        description="Data da transação no formato YYYY-MM-DD."
     )
     parcelas: int = Field(
         default=1,
-        description="Número de parcelas como número inteiro. Detecte padrões como '6x', 'x6', 'em 6x', 'parcelado em 6 vezes'. Se não houver parcelamento, retorne 1."
+        description="Número de parcelas como número inteiro. Detecte padrões como '6x', 'x6', 'em 6x'. Sem parcelamento = 1."
     )
 
     @field_validator("parcelas", mode="before")
@@ -62,6 +67,7 @@ _prompt = ChatPromptTemplate.from_messages(
                 "os dados da transação financeira. Responda APENAS com um objeto JSON válido.\n\n"
                 "Data de hoje: {hoje}\n\n"
                 "Regras:\n"
+                "- intencao: 'atualizacao' quando o usuário usar palavras como 'atualizar', 'atualize', 'tenho X investido', 'meu investimento é X'. Caso contrário, 'nova'.\n"
                 "- tipo: USE 'saida' por padrão para qualquer gasto/despesa/compra/pagamento/conta/mensalidade. Use 'entrada' APENAS quando houver palavra explícita de receita: recebi, salário, freelance, renda, depósito, pagamento recebido\n"
                 "- valor: número positivo TOTAL (converta 'reais'/'R$' para float). Se parcelado, retorne o valor total.\n"
                 "- descricao: texto curto e claro descrevendo a transação\n"
@@ -116,4 +122,5 @@ def categorizar(texto: str) -> Transacao:
         categoria=categoria,
         data=data_transacao,
         parcelas=resultado.parcelas,
+        intencao=resultado.intencao,
     )

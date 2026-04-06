@@ -262,6 +262,19 @@ def resumo_mensal(user_id: int) -> list[dict]:
         return _rows(cur.fetchall())
 
 
+def investimentos_total(user_id: int) -> float:
+    """Retorna o saldo líquido atual de investimentos (entradas - saídas na categoria)."""
+    with _cur() as cur:
+        cur.execute(f"""
+            SELECT
+                COALESCE(SUM(CASE WHEN tipo = 'entrada' THEN valor ELSE -valor END), 0) AS total
+            FROM transacoes
+            WHERE user_id = {P} AND categoria = 'Investimentos'
+        """, (user_id,))
+        row = cur.fetchone()
+        return float(row["total"])
+
+
 def investimentos(user_id: int) -> list[dict]:
     with _cur() as cur:
         cur.execute(f"""

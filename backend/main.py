@@ -21,6 +21,7 @@ from database import (
     criar_usuario,
     init_db,
     investimentos,
+    investimentos_total,
     resumo_mensal,
     resumo_por_categoria,
     saldo_atual,
@@ -114,6 +115,31 @@ def criar_transacao(body: TextoLivre, user_id: int = Depends(get_current_user)):
         raise HTTPException(status_code=422, detail=str(exc))
 
     try:
+        # Atualização de investimento: calcula diferença e registra ajuste
+        if transacao.intencao == "atualizacao":
+            total_atual = investimentos_total(user_id=user_id)
+            diff = round(transacao.valor - total_atual, 2)
+            if diff == 0:
+                return {"mensagem": "Nenhuma alteração — valor já é o atual.", "total": total_atual}
+            tipo_ajuste = "entrada" if diff > 0 else "saida"
+            id_criado = salvar_transacao(
+                user_id=user_id,
+                tipo=tipo_ajuste,
+                valor=abs(diff),
+                descricao=f"Atualização investimento → {transacao.valor:.2f}",
+                categoria="Investimentos",
+                data=transacao.data.strftime("%Y-%m-%d"),
+            )
+            return {
+                "id": id_criado,
+                "tipo": tipo_ajuste,
+                "valor": abs(diff),
+                "descricao": f"Atualização investimento → {transacao.valor:.2f}",
+                "categoria": "Investimentos",
+                "data": transacao.data.strftime("%Y-%m-%d"),
+                "novo_total": transacao.valor,
+            }
+
         # Compra parcelada — cria N transações com datas incrementais
         if transacao.parcelas > 1:
             data_base = transacao.data
