@@ -67,26 +67,6 @@ _prompt = ChatPromptTemplate.from_messages(
 _chain = _prompt | llm.with_structured_output(TransacaoSchema)
 
 
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-
-def responder_chat(mensagens: list, system_prompt: str) -> str:
-    try:
-        history = [SystemMessage(content=system_prompt)]
-        for m in mensagens:
-            if m["role"] == "user":
-                history.append(HumanMessage(content=m["content"]))
-            else:
-                history.append(AIMessage(content=m["content"]))
-        
-        resposta = llm.invoke(history)
-        if not resposta or not resposta.content:
-            raise ValueError("A API do Gemini retornou uma resposta vazia. Verifique sua cota e chave de API.")
-            
-        return resposta.content
-    except Exception as e:
-        print(f"ERRO NO CHAT: {str(e)}")
-        raise e
-
 
 def categorizar(texto: str) -> Transacao:
     # Obtém a hora atual em Brasília

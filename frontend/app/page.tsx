@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Chat from "./components/Chat";
 import Extrato from "./components/Extrato";
 import Investimentos from "./components/Investimentos";
 import Mensal from "./components/Mensal";
@@ -10,14 +9,13 @@ import Resumo from "./components/Resumo";
 import TransacaoInput from "./components/TransacaoInput";
 import { clearAuth, getUser, isLoggedIn } from "./lib/auth";
 
-type Aba = "dashboard" | "mensal" | "extrato" | "investimentos" | "chat";
+type Aba = "dashboard" | "mensal" | "extrato" | "investimentos";
 
 const ABAS: { id: Aba; label: string; icon: string }[] = [
   { id: "dashboard",     label: "Dashboard",    icon: "📊" },
   { id: "mensal",        label: "Mensal",        icon: "📅" },
   { id: "extrato",       label: "Extrato",       icon: "📋" },
   { id: "investimentos", label: "Investimentos", icon: "📈" },
-  { id: "chat",          label: "Chat IA",       icon: "🤖" },
 ];
 
 const TITULOS: Record<Aba, string> = {
@@ -25,7 +23,6 @@ const TITULOS: Record<Aba, string> = {
   mensal:        "Visão mensal",
   extrato:       "Extrato de transações",
   investimentos: "Investimentos",
-  chat:          "Chat com IA",
 };
 
 export default function Page() {
@@ -164,15 +161,7 @@ export default function Page() {
           </div>
         )}
 
-        {/* Chat */}
-        {aba === "chat" && (
-          <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm p-4 sm:p-6">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-400 mb-4 sm:mb-5">
-              Chat com IA
-            </p>
-            <Chat />
-          </div>
-        )}
+
       </main>
 
       {/* ── BOTTOM NAV — mobile only ── */}

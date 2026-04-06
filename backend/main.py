@@ -10,7 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from auth import create_token, decode_token, hash_password, verify_password
-from categorizer import categorizar, responder_chat
+from categorizer import categorizar
 from database import (
     atualizar_pagamento,
     buscar_transacoes,
@@ -77,15 +77,6 @@ class PagamentoBody(BaseModel):
     pagamento: str  # "VR" | "VA" | "Cartao"
 
 
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-
-class ChatBody(BaseModel):
-    mensagens: list[ChatMessage]
-    systemPrompt: str
-
 
 # ---------- rotas públicas ----------
 
@@ -113,15 +104,6 @@ def login(body: LoginBody):
 
 
 # ---------- rotas protegidas ----------
-
-@app.post("/chat")
-def chat(body: ChatBody, user_id: int = Depends(get_current_user)):
-    try:
-        mensagens_dict = [{"role": m.role, "content": m.content} for m in body.mensagens]
-        resposta = responder_chat(mensagens_dict, body.systemPrompt)
-        return {"resposta": resposta}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/transacao", status_code=201)
