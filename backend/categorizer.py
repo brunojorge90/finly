@@ -58,7 +58,7 @@ _prompt = ChatPromptTemplate.from_messages(
             "system",
             (
                 "Você é um assistente financeiro. Analise o texto do usuário e extraia "
-                "os dados da transação financeira.\n\n"
+                "os dados da transação financeira. Responda APENAS com um objeto JSON válido.\n\n"
                 "Data de hoje: {hoje}\n\n"
                 "Regras:\n"
                 "- tipo: 'entrada' para receitas/ganhos, 'saida' para despesas/gastos\n"
