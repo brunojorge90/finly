@@ -113,62 +113,65 @@ def criar_transacao(body: TextoLivre, user_id: int = Depends(get_current_user)):
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    # Compra parcelada — cria N transações com datas incrementais
-    if transacao.parcelas > 1:
-        data_base = transacao.data
-        grupo_id = str(uuid.uuid4())
-        valor_parcela = round(transacao.valor / transacao.parcelas, 2)
-        resultado = []
+    try:
+        # Compra parcelada — cria N transações com datas incrementais
+        if transacao.parcelas > 1:
+            data_base = transacao.data
+            grupo_id = str(uuid.uuid4())
+            valor_parcela = round(transacao.valor / transacao.parcelas, 2)
+            resultado = []
 
-        for i in range(transacao.parcelas):
-            data_parcela = data_base + relativedelta(months=i)
-            data_str = data_parcela.strftime("%Y-%m-%d")
-            descricao_parcela = f"{transacao.descricao} {i + 1}/{transacao.parcelas}"
+            for i in range(transacao.parcelas):
+                data_parcela = data_base + relativedelta(months=i)
+                data_str = data_parcela.strftime("%Y-%m-%d")
+                descricao_parcela = f"{transacao.descricao} {i + 1}/{transacao.parcelas}"
 
-            id_criado = salvar_transacao(
-                user_id=user_id,
-                tipo=transacao.tipo,
-                valor=valor_parcela,
-                descricao=descricao_parcela,
-                categoria=transacao.categoria.value,
-                data=data_str,
-                parcela_grupo=grupo_id,
-                parcela_num=i + 1,
-                parcela_total=transacao.parcelas,
-            )
+                id_criado = salvar_transacao(
+                    user_id=user_id,
+                    tipo=transacao.tipo,
+                    valor=valor_parcela,
+                    descricao=descricao_parcela,
+                    categoria=transacao.categoria.value,
+                    data=data_str,
+                    parcela_grupo=grupo_id,
+                    parcela_num=i + 1,
+                    parcela_total=transacao.parcelas,
+                )
 
-            resultado.append({
-                "id": id_criado,
-                "tipo": transacao.tipo,
-                "valor": valor_parcela,
-                "descricao": descricao_parcela,
-                "categoria": transacao.categoria.value,
-                "data": data_str,
-                "parcela_grupo": grupo_id,
-                "parcela_num": i + 1,
-                "parcela_total": transacao.parcelas,
-            })
+                resultado.append({
+                    "id": id_criado,
+                    "tipo": transacao.tipo,
+                    "valor": valor_parcela,
+                    "descricao": descricao_parcela,
+                    "categoria": transacao.categoria.value,
+                    "data": data_str,
+                    "parcela_grupo": grupo_id,
+                    "parcela_num": i + 1,
+                    "parcela_total": transacao.parcelas,
+                })
 
-        return resultado
+            return resultado
 
-    # Transação normal — fluxo original
-    id_criado = salvar_transacao(
-        user_id=user_id,
-        tipo=transacao.tipo,
-        valor=transacao.valor,
-        descricao=transacao.descricao,
-        categoria=transacao.categoria.value,
-        data=transacao.data.strftime("%Y-%m-%d"),
-    )
+        # Transação normal — fluxo original
+        id_criado = salvar_transacao(
+            user_id=user_id,
+            tipo=transacao.tipo,
+            valor=transacao.valor,
+            descricao=transacao.descricao,
+            categoria=transacao.categoria.value,
+            data=transacao.data.strftime("%Y-%m-%d"),
+        )
 
-    return {
-        "id": id_criado,
-        "tipo": transacao.tipo,
-        "valor": transacao.valor,
-        "descricao": transacao.descricao,
-        "categoria": transacao.categoria.value,
-        "data": transacao.data.strftime("%Y-%m-%d"),
-    }
+        return {
+            "id": id_criado,
+            "tipo": transacao.tipo,
+            "valor": transacao.valor,
+            "descricao": transacao.descricao,
+            "categoria": transacao.categoria.value,
+            "data": transacao.data.strftime("%Y-%m-%d"),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {type(exc).__name__}: {exc}")
 
 
 @app.get("/transacoes")
