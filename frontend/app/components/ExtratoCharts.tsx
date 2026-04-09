@@ -26,6 +26,7 @@ interface Transacao {
 interface Props {
   transacoes: Transacao[];
   mesSelecionado: string;
+  somentePie?: boolean;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -80,7 +81,7 @@ function CustomPieTooltip({ active, payload }: any) {
   );
 }
 
-export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
+export default function ExtratoCharts({ transacoes, mesSelecionado, somentePie = false }: Props) {
   if (transacoes.length === 0) return null;
 
   // ── KPI ──────────────────────────────────────────────────────
@@ -134,6 +135,50 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
     });
 
   const showBar = evolData.length > 1;
+
+  if (somentePie) {
+    return (
+      <div className="rounded-xl p-4" style={{ background: "var(--s2)", border: "1px solid var(--border)" }}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">
+          Distribuição por categoria
+        </p>
+        {saidasPorCat.length === 0 ? (
+          <p className="text-xs text-white/30 text-center py-4">Nenhum gasto no período.</p>
+        ) : (
+          <div className="flex items-center gap-5">
+            <PieChart width={148} height={148}>
+              <Pie data={saidasPorCat} cx={70} cy={70} innerRadius={44} outerRadius={68}
+                   paddingAngle={2} dataKey="value" stroke="none">
+                {saidasPorCat.map((entry) => (
+                  <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name] ?? "#64748b"} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomPieTooltip />} />
+            </PieChart>
+            <ul className="flex-1 space-y-2 min-w-0">
+              {saidasPorCat.map((item) => {
+                const pct = totalSaidas > 0 ? Math.round((item.value / totalSaidas) * 100) : 0;
+                return (
+                  <li key={item.name} className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="inline-block w-2 h-2 rounded-full shrink-0"
+                            style={{ background: CATEGORY_COLORS[item.name] ?? "#64748b" }} />
+                      <span className="text-[11px] text-white/50 truncate flex-1">{item.name}</span>
+                      <span className="text-[11px] font-semibold text-white/70 shrink-0">{pct}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full"
+                           style={{ width: `${pct}%`, background: CATEGORY_COLORS[item.name] ?? "#64748b" }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
