@@ -57,7 +57,7 @@ function formatAxisBRL(value: number) {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0d1629] px-3 py-2.5 text-xs shadow-2xl">
+    <div className="rounded-xl px-3 py-2.5 text-xs shadow-2xl" style={{ background: "var(--s3)", border: "1px solid var(--border-accent)" }}>
       <p className="text-white/40 mb-1.5">{label}</p>
       {payload.map((p: { name: string; value: number; color: string }) => (
         <p key={p.name} className="font-semibold" style={{ color: p.color }}>
@@ -140,7 +140,7 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/8 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400/60 mb-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400/70 mb-1">
             Entradas
           </p>
           <p className="text-base font-bold text-emerald-300 truncate">
@@ -149,7 +149,7 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
         </div>
 
         <div className="rounded-xl border border-red-500/15 bg-red-500/8 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-red-400/60 mb-1">
+          <p className="text-xs font-semibold uppercase tracking-widest text-red-400/70 mb-1">
             Saídas
           </p>
           <p className="text-base font-bold text-red-300 truncate">
@@ -157,25 +157,16 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
           </p>
         </div>
 
-        <div
-          className={`rounded-xl border px-4 py-3 ${
-            saldo >= 0
-              ? "border-blue-500/15 bg-blue-500/8"
-              : "border-orange-500/15 bg-orange-500/8"
-          }`}
-        >
-          <p
-            className={`text-[10px] font-semibold uppercase tracking-widest mb-1 ${
-              saldo >= 0 ? "text-blue-400/60" : "text-orange-400/60"
-            }`}
-          >
+        <div className="rounded-xl px-4 py-3"
+             style={saldo >= 0
+               ? { border: "1px solid var(--border-accent)", background: "var(--accent-dim)" }
+               : { border: "1px solid rgba(251,146,60,0.2)", background: "rgba(251,146,60,0.08)" }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1"
+             style={{ color: saldo >= 0 ? "var(--accent)" : "#fb923c", opacity: 0.8 }}>
             Saldo
           </p>
-          <p
-            className={`text-base font-bold truncate ${
-              saldo >= 0 ? "text-blue-300" : "text-orange-300"
-            }`}
-          >
+          <p className="text-base font-bold mono truncate"
+             style={{ color: saldo >= 0 ? "var(--accent)" : "#fb923c" }}>
             {formatBRL(saldo)}
           </p>
         </div>
@@ -187,7 +178,7 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
         {/* Donut — categorias */}
         {saidasPorCat.length > 0 && (
           <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/30 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">
               Gastos por categoria
             </p>
             <div className="flex items-center gap-5">
@@ -252,7 +243,7 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
         {/* Bar — evolução temporal */}
         {showBar && (
           <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/30 mb-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">
               {mesSelecionado === "todos" ? "Evolução mensal" : "Evolução diária"}
             </p>
 
@@ -283,11 +274,11 @@ export default function ExtratoCharts({ transacoes, mesSelecionado }: Props) {
             </ResponsiveContainer>
 
             <div className="flex items-center justify-center gap-5 mt-2">
-              <span className="flex items-center gap-1.5 text-[10px] text-white/40">
+              <span className="flex items-center gap-1.5 text-xs text-white/40">
                 <span className="inline-block w-2.5 h-2 rounded-sm bg-emerald-500" />
                 Entradas
               </span>
-              <span className="flex items-center gap-1.5 text-[10px] text-white/40">
+              <span className="flex items-center gap-1.5 text-xs text-white/40">
                 <span className="inline-block w-2.5 h-2 rounded-sm bg-red-500" />
                 Saídas
               </span>

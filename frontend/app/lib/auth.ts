@@ -34,6 +34,13 @@ export function isLoggedIn(): boolean {
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+export class NetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NetworkError";
+  }
+}
+
 export async function fetchApi(path: string, options: RequestInit = {}): Promise<Response> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -50,7 +57,13 @@ export async function fetchApi(path: string, options: RequestInit = {}): Promise
   } catch {
     // Backend pode estar acordando (Render free tier) — aguarda 8s e tenta de novo
     await new Promise(r => setTimeout(r, 8000));
-    res = await doFetch();
+    try {
+      res = await doFetch();
+    } catch {
+      throw new NetworkError(
+        "Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente em alguns instantes."
+      );
+    }
   }
 
   if (res.status === 401) {

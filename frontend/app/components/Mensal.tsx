@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { fetchApi } from "../lib/auth";
+import { fetchApi, NetworkError } from "../lib/auth";
 
 interface MesResumo {
   mes: string; // "2026-03"
@@ -40,7 +40,11 @@ export default function Mensal({ refreshKey = 0 }: Props) {
       if (!res.ok) throw new Error(`Erro ${res.status}`);
       setDados(await res.json());
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro inesperado");
+      setErro(
+        err instanceof NetworkError
+          ? err.message
+          : err instanceof Error ? err.message : "Erro inesperado"
+      );
     } finally {
       setLoading(false);
     }
@@ -56,14 +60,14 @@ export default function Mensal({ refreshKey = 0 }: Props) {
   );
 
   if (erro) return (
-    <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-      {erro}
-      <button onClick={fetchDados} className="ml-3 underline font-medium">Tentar novamente</button>
+    <div role="alert" className="animate-slide-in rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+      <p>{erro}</p>
+      <button onClick={fetchDados} className="mt-2 underline hover:no-underline font-medium">Tentar novamente</button>
     </div>
   );
 
   if (dados.length === 0) return (
-    <p className="text-center text-sm text-white/30 py-8">Nenhuma transação registrada ainda.</p>
+    <p className="text-center text-sm text-white/40 py-8">Nenhuma transação registrada ainda.</p>
   );
 
   const maxVal = Math.max(...dados.map((d) => Math.max(d.entradas, d.saidas)), 1);
@@ -79,19 +83,19 @@ export default function Mensal({ refreshKey = 0 }: Props) {
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
-          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Meses</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">Meses</p>
           <p className="text-2xl font-bold text-white">{dados.length}</p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
-          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média entradas</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">Média entradas</p>
           <p className="text-base sm:text-xl font-bold text-emerald-400">{formatBRL(mediaEntradas)}</p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
-          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Média saídas</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">Média saídas</p>
           <p className="text-base sm:text-xl font-bold text-red-400">{formatBRL(mediaSaidas)}</p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/3 p-3 sm:p-4">
-          <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1">Melhor mês</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">Melhor mês</p>
           <p className="text-sm font-bold text-blue-300">{labelMes(melhorMes.mes)}</p>
           <p className="text-xs text-emerald-400 mt-0.5">{formatBRL(melhorMes.entradas - melhorMes.saidas)}</p>
         </div>
@@ -156,7 +160,7 @@ export default function Mensal({ refreshKey = 0 }: Props) {
       </div>
 
       {/* Legenda */}
-      <p className="text-xs text-white/20 text-center">
+      <p className="text-xs text-white/40 text-center">
         As barras são proporcionais ao maior valor entre todos os meses.
         Pior mês: <span className="text-red-400/60">{labelMes(piorMes.mes)}</span>
       </p>

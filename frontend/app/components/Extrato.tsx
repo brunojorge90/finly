@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import * as XLSX from "xlsx";
-import { fetchApi } from "../lib/auth";
+import { fetchApi, NetworkError } from "../lib/auth";
 
 const ExtratoCharts = dynamic(() => import("./ExtratoCharts"), { ssr: false });
 
@@ -89,6 +89,7 @@ export default function Extrato({ refreshKey = 0 }: Props) {
   const [mesSelecionado, setMesSelecionado] = useState<string>("todos");
   const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
   const [deletandoId, setDeletandoId] = useState<number | null>(null);
+  const [erroDelete, setErroDelete] = useState<string | null>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function pedirConfirmacao(id: number) {
@@ -105,7 +106,11 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       if (!res.ok) throw new Error(`Erro ${res.status}`);
       setTransacoes(await res.json());
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro inesperado");
+      setErro(
+        err instanceof NetworkError
+          ? err.message
+          : err instanceof Error ? err.message : "Erro inesperado"
+      );
     } finally {
       setLoading(false);
     }
@@ -126,8 +131,13 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       const res = await fetchApi(`/transacao/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Erro ${res.status}`);
       setTransacoes((prev) => prev.filter((t) => t.id !== id));
-    } catch {
-      // mantém a transação na lista se o backend falhou
+    } catch (err) {
+      setErroDelete(
+        err instanceof NetworkError
+          ? "Não foi possível excluir: servidor offline."
+          : "Não foi possível excluir a transação."
+      );
+      setTimeout(() => setErroDelete(null), 5000);
     } finally {
       setDeletandoId(null);
       setConfirmandoId(null);
@@ -136,20 +146,22 @@ export default function Extrato({ refreshKey = 0 }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12 text-white/40 text-sm gap-2">
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white/60" />
-        Carregando extrato…
+      <div className="space-y-2">
+        {[0,1,2,3].map((i) => (
+          <div key={i} className="rounded-xl h-12 animate-pulse"
+               style={{ background: "var(--s2)", border: "1px solid var(--border)", animationDelay: `${i*60}ms` }} />
+        ))}
       </div>
     );
   }
 
   if (erro) {
     return (
-      <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-        {erro}
+      <div role="alert" className="animate-slide-in rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <p>{erro}</p>
         <button
           onClick={fetchTransacoes}
-          className="ml-3 underline hover:no-underline font-medium"
+          className="mt-2 underline hover:no-underline font-medium"
         >
           Tentar novamente
         </button>
@@ -159,9 +171,10 @@ export default function Extrato({ refreshKey = 0 }: Props) {
 
   if (transacoes.length === 0) {
     return (
-      <p className="text-center text-sm text-white/30 py-8">
-        Nenhuma transação registrada ainda.
-      </p>
+      <div className="text-center py-12">
+        <p className="text-4xl mb-3">📋</p>
+        <p className="text-white/40 text-sm">Nenhuma transação registrada ainda.</p>
+      </div>
     );
   }
 
@@ -196,6 +209,21 @@ export default function Extrato({ refreshKey = 0 }: Props) {
 
   return (
     <div className="space-y-4">
+      {erroDelete && (
+        <div role="alert" className="animate-slide-in flex items-center gap-3 rounded-xl border border-red-500/20
+                   bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <span className="text-red-400 text-base leading-none shrink-0" aria-hidden="true">!</span>
+          <p className="flex-1">{erroDelete}</p>
+          <button
+            onClick={() => setErroDelete(null)}
+            className="shrink-0 text-xs font-medium text-red-400/60 hover:text-red-300 transition-colors"
+            aria-label="Fechar alerta"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
       {/* Dashboards */}
       <ExtratoCharts transacoes={transacoesFiltradas} mesSelecionado={mesSelecionado} />
 
@@ -203,25 +231,16 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Pills de mês */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setMesSelecionado("todos")}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors
-              ${mesSelecionado === "todos"
-                ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                : "border border-white/10 text-white/50 hover:text-white/80"}`}
-          >
-            Todos
-          </button>
-          {mesesDisponiveis.map((ym) => (
+          {["todos", ...mesesDisponiveis].map((ym) => (
             <button
               key={ym}
               onClick={() => setMesSelecionado(ym)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors
-                ${mesSelecionado === ym
-                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/20"
-                  : "border border-white/10 text-white/50 hover:text-white/80"}`}
+              className="rounded-full px-3 py-1 text-xs font-medium transition-all"
+              style={mesSelecionado === ym
+                ? { background: "var(--accent)", color: "white", boxShadow: "0 2px 10px var(--accent-glow)" }
+                : { border: "1px solid var(--border)", color: "rgba(255,255,255,0.45)" }}
             >
-              {labelMes(ym)}
+              {ym === "todos" ? "Todos" : labelMes(ym)}
             </button>
           ))}
         </div>
@@ -251,15 +270,16 @@ export default function Extrato({ refreshKey = 0 }: Props) {
       {/* Table + Cards — visíveis quando há resultados */}
       {transacoesFiltradas.length > 0 && (
       <>
-      <div className="hidden sm:block overflow-x-auto rounded-xl border border-white/8">
+      <div className="hidden sm:block overflow-x-auto rounded-xl"
+           style={{ border: "1px solid var(--border)" }}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/8 bg-white/3 text-left">
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Data</th>
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Descrição</th>
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Categoria</th>
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30">Tipo</th>
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-white/30 text-right">Valor</th>
+            <tr className="text-left" style={{ borderBottom: "1px solid var(--border)", background: "var(--s2)" }}>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white/30">Data</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white/30">Descrição</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white/30">Categoria</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white/30">Tipo</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-white/30 text-right">Valor</th>
               <th className="px-4 py-3 w-10" />
             </tr>
           </thead>
@@ -298,8 +318,8 @@ export default function Extrato({ refreshKey = 0 }: Props) {
                   </span>
                 </td>
                 <td
-                  className={`px-4 py-3 text-right font-semibold whitespace-nowrap
-                    ${t.tipo === "entrada" ? "text-emerald-400" : "text-red-400"}`}
+                  className="px-4 py-3 text-right font-semibold whitespace-nowrap mono"
+                  style={{ color: t.tipo === "entrada" ? "var(--positive)" : "var(--negative)" }}
                 >
                   {t.tipo === "entrada" ? "+" : "−"} {formatBRL(t.valor)}
                 </td>

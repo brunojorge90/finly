@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { fetchApi } from "../lib/auth";
+import { fetchApi, NetworkError } from "../lib/auth";
 
 interface Transacao {
   id: number;
@@ -107,8 +107,11 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
         method: "PATCH",
         body: JSON.stringify({ pagamento }),
       });
-    } catch {
-      // falha silenciosa — a transação já foi salva, só o pagamento não ficou registrado
+    } catch (err) {
+      // A transação já foi salva — mostra aviso discreto se não conseguiu registrar o pagamento
+      if (err instanceof NetworkError) {
+        setErro("Transação salva, mas não foi possível registrar a forma de pagamento (servidor offline).");
+      }
     } finally {
       setConfirmacao(modalTransacao);
       setModalTransacao(null);
@@ -130,17 +133,24 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
           onChange={(e) => setTexto(e.target.value)}
           placeholder="Ex: gasto coca 3 reais, recebi salário 5000…"
           disabled={loading}
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm
-                     text-white placeholder-white/30 focus:outline-none focus:ring-2
-                     focus:ring-blue-500 focus:border-transparent disabled:opacity-50
+          className="input-obsidian flex-1 rounded-xl px-4 py-3 text-sm
+                     text-white placeholder-white/30 disabled:opacity-50
                      disabled:cursor-not-allowed transition-colors"
+          style={{
+            background: "var(--s2)",
+            border: "1px solid var(--border)",
+          }}
         />
         <button
           type="submit"
           disabled={loading || !texto.trim()}
-          className="rounded-xl bg-blue-500 hover:bg-blue-400 active:bg-blue-600 px-6 py-3
-                     text-sm font-semibold text-white transition-colors shadow-lg shadow-blue-500/20
-                     disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 shrink-0"
+          className="rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all
+                     disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0
+                     w-28 sm:w-auto hover:brightness-110 active:scale-[0.97]"
+          style={{
+            background: "var(--accent)",
+            boxShadow: "0 4px 14px var(--accent-glow)",
+          }}
         >
           {loading ? (
             <>
@@ -155,7 +165,7 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
       </form>
 
       {confirmacao && (
-        <div className="mt-3 flex items-start gap-3 rounded-xl border border-emerald-500/20
+        <div className="animate-slide-in mt-3 flex items-start gap-3 rounded-xl border border-emerald-500/20
                         bg-emerald-500/10 px-4 py-3 text-sm">
           <span className="text-emerald-400 text-base leading-none mt-0.5">✓</span>
           <div>
@@ -180,7 +190,7 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
       )}
 
       {confirmacaoParcelada && (
-        <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-500/20
+        <div className="animate-slide-in mt-3 flex items-start gap-3 rounded-xl border border-blue-500/20
                         bg-blue-500/10 px-4 py-3 text-sm">
           <span className="text-blue-400 text-base leading-none mt-0.5">✓</span>
           <div>
@@ -199,7 +209,7 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
       )}
 
       {erro && (
-        <div className="mt-3 flex items-start gap-3 rounded-xl border border-red-500/20
+        <div className="animate-slide-in mt-3 flex items-start gap-3 rounded-xl border border-red-500/20
                         bg-red-500/10 px-4 py-3 text-sm text-red-300">
           <span className="text-red-400 text-base leading-none mt-0.5">✕</span>
           <p>{erro}</p>
@@ -215,8 +225,8 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
             onClick={fecharModal}
           />
 
-          <div className="relative w-full max-w-xs rounded-2xl border border-white/10
-                          bg-[#0d1629] shadow-2xl p-6">
+          <div className="relative w-full max-w-xs rounded-2xl p-6"
+               style={{ background: "var(--s3)", border: "1px solid var(--border-accent)", boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px var(--accent-dim)" }}>
             {/* cabeçalho */}
             <div className="mb-1 flex items-center gap-2">
               <span className="text-xl">🍽️</span>
@@ -237,6 +247,8 @@ export default function TransacaoInput({ onTransacaoCriada }: Props) {
                   onClick={() => handlePagamento(op.value)}
                   className="flex items-center gap-3 rounded-xl border border-white/8
                              bg-white/4 hover:bg-white/8 hover:border-blue-500/40
+                             active:scale-[0.98] active:bg-white/10
+                             focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none
                              px-4 py-3 text-left transition-colors disabled:opacity-50"
                 >
                   <div className="flex-1 min-w-0">
